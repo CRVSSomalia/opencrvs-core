@@ -338,10 +338,6 @@ class CertificatesConfigComponent extends React.Component<Props, State> {
       {
         id: Event.Death,
         title: intl.formatMessage(constantsMessages.deaths)
-      },
-      {
-        id: Event.Marriage,
-        title: intl.formatMessage(constantsMessages.marriages)
       }
     ]
 

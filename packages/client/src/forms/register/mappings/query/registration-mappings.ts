@@ -114,14 +114,26 @@ export const convertToLocal = (
     return
   }
   const number = phoneUtil.parse(mobileWithCountryCode, countryCode)
+  let numberInNationalFormat = phoneUtil.format(
+    number,
+    PhoneNumberFormat.NATIONAL
+  )
 
-  return phoneUtil
-    .format(number, PhoneNumberFormat.NATIONAL)
-    .replace(/[^A-Z0-9]+/gi, '')
+  // This is a special case for countries that have a national prefix of 0
+  if (
+    numberInNationalFormat &&
+    phoneUtil.getNddPrefixForRegion(countryCode, true) === '0' &&
+    !numberInNationalFormat.startsWith('0')
+  ) {
+    numberInNationalFormat =
+      '0' + numberInNationalFormat.replace(/[^A-Z0-9]+/gi, '')
+  }
+
+  return numberInNationalFormat
 }
 
 export const localPhoneTransformer =
-  (transformedFieldName?: string, _codeReplacement?: string) =>
+  (transformedFieldName?: string) =>
   (
     transformedData: TransformedData,
     queryData: IFormData,
