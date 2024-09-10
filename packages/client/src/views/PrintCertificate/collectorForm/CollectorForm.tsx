@@ -75,11 +75,14 @@ import { IOfflineData } from '@client/offline/reducer'
 import { WORKQUEUE_TABS } from '@client/components/interface/Navigation'
 import { getUserDetails } from '@client/profile/profileSelectors'
 import { getRegisteringOfficeId } from '@client/utils/draftUtils'
+import { UserDetails } from '@client/utils/userUtils'
 
 const ErrorWrapper = styled.div`
   margin-top: -3px;
   margin-bottom: 16px;
 `
+
+type CertificateType = 'short' | 'full'
 
 type PropsWhenDeclarationIsFound = {
   registerForm: IForm
@@ -90,6 +93,7 @@ type PropsWhenDeclarationIsFound = {
   formSection: IFormSection
   formGroup: IFormSectionGroup
   offlineCountryConfiguration: IOfflineData
+  userDetails: UserDetails | null
 }
 type PropsWhenDeclarationIsNotFound = {
   declaration: undefined
@@ -218,16 +222,18 @@ class CollectorFormComponent extends React.Component<IProps, IState> {
     })
   }
 
-  continueButtonHandler = (
+  certButtonHandler = (
     declarationId: string,
     currentGroup: string,
     nextGroup: string | undefined,
     event: Event,
     sectionId: keyof IPrintableDeclaration['data'],
     fields: IFormField[],
-    draft: IPrintableDeclaration | undefined
+    draft: IPrintableDeclaration | undefined,
+    certificateType: CertificateType
   ) => {
     if (!draft) return
+    console.log(draft)
 
     const errors = getErrorsOnFieldsBySection(sectionId, fields, draft)
     const errorValues = Object.values(errors).map(Object.values)
@@ -248,6 +254,7 @@ class CollectorFormComponent extends React.Component<IProps, IState> {
 
       return
     }
+    draft.data.template.certificateType = certificateType
 
     if (currentGroup === 'affidavit') {
       if (
@@ -285,7 +292,8 @@ class CollectorFormComponent extends React.Component<IProps, IState> {
     if (!nextGroup) {
       this.props.writeDeclaration(draft)
 
-      if (isCertificateForPrintInAdvance(draft)) {
+      draft.data.template.isAdvance = isCertificateForPrintInAdvance(draft)
+      if (draft.data.template.isAdvance) {
         this.props.goToReviewCertificate(declarationId, event)
       } else {
         this.props.goToVerifyCollector(
@@ -356,6 +364,20 @@ class CollectorFormComponent extends React.Component<IProps, IState> {
       formGroup,
       declaration
     )
+
+    const shortCertButton =
+      event == Event.Birth
+        ? buttonMessages.shortBirthCertCopy
+        : Event.Death
+        ? buttonMessages.shortDeathCertCopy
+        : buttonMessages.shortMarraigeCertCopy
+
+    const fullCertButton =
+      event == Event.Birth
+        ? buttonMessages.fullBirthCertCopy
+        : Event.Death
+        ? buttonMessages.fullDeathCertCopy
+        : buttonMessages.fullMarraigeCertCopy
     return (
       <>
         <ActionPageLight
@@ -395,23 +417,43 @@ class CollectorFormComponent extends React.Component<IProps, IState> {
               draftData={declarationToBeCertified.data}
               onUploadingStateChanged={this.onUploadingStateChanged}
             />
-            <PrimaryButton
+            <TertiaryButton
               id="confirm_form"
               onClick={() => {
-                this.continueButtonHandler(
+                this.certButtonHandler(
                   declarationToBeCertified.id,
                   formGroup.id,
                   nextSectionGroup ? nextSectionGroup.groupId : undefined,
                   event,
                   formSection.id,
                   formGroup.fields,
-                  declarationToBeCertified
+                  declarationToBeCertified,
+                  'full'
                 )
               }}
               disabled={this.state.isFileUploading}
             >
-              {intl.formatMessage(buttonMessages.continueButton)}
-            </PrimaryButton>
+              {intl.formatMessage(fullCertButton)}
+            </TertiaryButton>
+            <TertiaryButton
+              // id="confirm_form"
+              // hidden={event == 'death'}
+              onClick={() => {
+                this.certButtonHandler(
+                  declarationToBeCertified.id,
+                  formGroup.id,
+                  nextSectionGroup ? nextSectionGroup.groupId : undefined,
+                  event,
+                  formSection.id,
+                  formGroup.fields,
+                  declarationToBeCertified,
+                  'short'
+                )
+              }}
+              disabled={this.state.isFileUploading}
+            >
+              {intl.formatMessage(shortCertButton)}
+            </TertiaryButton>
           </Content>
         </ActionPageLight>
         {showModalForNoSignedAffidavit && (
@@ -533,7 +575,8 @@ const mapStateToProps = (
       ...formGroup,
       fields
     },
-    offlineCountryConfiguration: getOfflineData(state)
+    offlineCountryConfiguration: getOfflineData(state),
+    userDetails
   }
 }
 

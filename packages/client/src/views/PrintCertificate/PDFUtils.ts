@@ -157,10 +157,10 @@ export function executeHandlebarsTemplate(
           return v1 > v2 ? options.fn(this) : options.inverse(this)
         case '>=':
           return v1 >= v2 ? options.fn(this) : options.inverse(this)
-        case '&&':
-          return v1 && v2 ? options.fn(this) : options.inverse(this)
+        case 'AND':
+          return !!v1 && !!v2 ? options.fn(this) : options.inverse(this)
         case '||':
-          return v1 || v2 ? options.fn(this) : options.inverse(this)
+          return !!v1 || !!v2 ? options.fn(this) : options.inverse(this)
         default:
           return options.inverse(this)
       }
@@ -219,11 +219,12 @@ export function addFontsToSvg(
     .flatMap(([font, families]) =>
       Object.entries(families).map(
         ([family, url]) => `
-@font-face {
-font-family: "${font}";
-font-weight: ${family};
-src: url("${url}") format("truetype");
-}`
+          @font-face {
+            font-family: "${font}";
+            font-weight: ${family};
+            src: url("${url}") format("truetype");
+          }
+        `
       )
     )
     .join('')
@@ -306,9 +307,8 @@ export async function getPDFTemplateWithSVG(
   if (widthValue && heightValue) {
     const width = Number.parseInt(widthValue)
     const height = Number.parseInt(heightValue)
-    if (width > height) {
-      pdfTemplate.definition.pageOrientation = 'landscape'
-    }
+    pdfTemplate.definition.pageOrientation =
+      width > height ? 'landscape' : 'portrait'
   }
 
   pdfTemplate.definition.content = {

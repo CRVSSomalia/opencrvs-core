@@ -122,8 +122,7 @@ const ACTION_TO_CONTENT_MAP_SKELETON: (
             description: {
               message: messages.reviewActionDescriptionComplete,
               payload: {
-                deliveryMethod:
-                  window.config.INFORMANT_NOTIFICATION_DELIVERY_METHOD
+                deliveryMethod
               }
             },
             modal: {
@@ -147,8 +146,7 @@ const ACTION_TO_CONTENT_MAP_SKELETON: (
                 ? messages.reviewActionDescriptionIncomplete
                 : messages.reviewActionDescriptionForErrors,
               payload: {
-                deliveryMethod:
-                  window.config.INFORMANT_NOTIFICATION_DELIVERY_METHOD
+                deliveryMethod
               }
             },
             modal: {
@@ -313,7 +311,9 @@ const ReviewActionComponent = ({
     setShowSubmitModal(!showSubmitModal)
   }
   const ACTION_TO_CONTENT_MAP = ACTION_TO_CONTENT_MAP_SKELETON(
-    window.config.INFORMANT_NOTIFICATION_DELIVERY_METHOD,
+    window.config.INFORMANT_NOTIFICATION_DELIVERY_METHOD === 'sms'
+      ? window.config.INFORMANT_NOTIFICATION_DELIVERY_METHOD.toUpperCase()
+      : window.config.INFORMANT_NOTIFICATION_DELIVERY_METHOD,
     !!hasErrorsOnFields
   )
 
