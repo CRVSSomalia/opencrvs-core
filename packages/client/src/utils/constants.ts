@@ -83,5 +83,5 @@ export const ACCUMULATED_FILE_SIZE = 20480000
 export const DESKTOP_TIME_OUT_MILLISECONDS = 900000
 
 /** Current application version used in the left navigation. It's saved to localStorage to determine if a user logged into a newer version of the app for the first time */
-export const APPLICATION_VERSION = 'v1.5.0'
+export const APPLICATION_VERSION = 'v1.5.1'
 export const IS_PROD_ENVIRONMENT = import.meta.env.PROD

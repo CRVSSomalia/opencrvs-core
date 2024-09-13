@@ -1,147 +1,116 @@
 # Changelog
 
-## 1.5.0
-
-### Breaking changes
-
-- **Removed dependency on OpenHIM.**&#x20;
-
-  The performance of OpenHIM added an unexpected burden of 200 m/s to every interaction. Cumulatively, this was negatively affecting user experience and therefore we decided to deprecate it.&#x20;
-
-  &#x20;Interested implementers are free to re-introduce OpenHIM should they wish to use it as an interoperability layer without affecting the performance of OpenCRVS now that our architecture no longer depends on it.
-
-  The OpenHIM database is kept for backwards compatibility reasons and will be removed in v1.6. [OpenHIM](https://openhim.org/) is an Open Source middleware component designed for managing FHIR interoperability between disparate systems as part of the OpenHIE architectural specification. We had been using this component in a much more fundamental way to monitor microservice comms in a similar fashion to Amazon SQS. &#x20;
-
-- **Upgrade node version to 18**
-
-  This version enforces environment to have Node 18 installed (supported until April 2025) and removes support for Node 16
-
-  - Use nvm to upgrade your local development environment to use node version `18.19.x.`
-  - Specified operating systems in js modules as `darwin, linux`
-  - Dev scripts and Vite run with an environment variable `NODE_OPTIONS=--dns-result-order=ipv4first` to resolve ipv4 addresses for `localhost` to support systems that resolves ipv6 addresses by default in Node versions >=17
-
-- **Update the certificate preview mechanism** In effort of minimizing JavaScript-bundle size, we have streamlined the way how review certificate -page renders certificates. In case the images in your certificates are previewing blurry, you need to update your SVG-certificates to print QR-codes and other images directly with `<image width="36" height="36" xlink:href="{{qrCode}}" x="500" y="770"></image>` instead of the more complicated `<rect fill="url(#pattern)"></rect>` -paradigm. This doesn't affect printed certificates as they are still created as previously.
-- **Generate default address according to logged-in user's location** We have dropped support for the 'agentDefault' prop which was used as initial value for SELECT_WITH_DYNAMIC_OPTIONS fields. If you have not made any changes to address generation, then this should not affect you. If you have, you can refer to this PR to see how agentDefault has been deprecated in an example country: [https://github.com/opencrvs/opencrvs-farajaland/pull/978](https://github.com/opencrvs/opencrvs-farajaland/pull/978)
-- **Remove system admin UI items: Application, Certificates, User roles, Informant notifications** We have now moved to configuring these items away from the UI in favour of directly editing these from country configuration repository in code - specifically in application-config-default.ts.
-- **Set Metabase default credentials.** These must be configured via countryconfig repository environment variables and secrets otherwise the dashboard service won't start
-- **Check your Metabase map file.** For Metabase configuration, we renamed `farajaland-map.geojson` to `map.geojson` to not tie implementations into example country naming conventions.
-- **Feature flags** In order to make application config settings more readable, we re-organised `src/api/application/application-config-default.ts` with a clear feature flag block like so. These are then used across the front and back end of the application to control configurable functionality. New feature flags DEATH_REGISTRATION allow you to optionally run off death registration if your country doesnt want to run its first pilot including death and PRINT_DECLARATION (see New Features) have been added.
-  `FEATURES: {
-  DEATH_REGISTRATION: true, 
-  MARRIAGE_REGISTRATION: false,
-  ...
-} `
-- **Improve rendering of addresses in review page where addresses match** When entering father's address details, some countries make use of a checkbox which says "Address is the same as the mothers. " which, when selected, makes the mother's address and fathers address the same. The checkbox has a programatic value of "Yes" or "No". As a result on the review page, the value "Yes" was displayed which didn't make grammatical sense as a response. We decided to use a custom label: "Same as mother's", which is what was asked on the form. This requires some code changes in the src/form/addresses/index.ts file to pull in the `hideInPreview` prop which will hide the value "Yes" on the review page and replace with a content managed label. Associated bug [#5086](https://github.com/opencrvs/opencrvs-core/issues/5086)
-
-### Infrastructure breaking changes
-
-More improvements have been made to the infrastructure provisioning and Github environment creation scripts and documentation. The complexity is somewhat reduced.
-
-- **We removed the example Wireguard VPN set up as it was confusing.** Our intention was to ensure that all implementers were aware that OpenCRVS should be installed behind a VPN and used Wireguard as an example. But the configuration requirements for Wireguard confused implementers who are not using it. Therefore we decided to remove Wireguard as an example. &#x20;
-- **We now have a "backup" Github environment and the backup server is automatically provisioned.** We moved the inventory file location to an explicit directory and removed parameters to scripts that can be automated. To migrate, move all inventory files (qa.yml, production.yml, staging.yml from `infrastructure/server-setup` to `infrastructure/server-setup/inventory` and configure `infrastructure/server-setup/inventory/backup.yml`. Run environment creator for your backup server `yarn environment:init --environment=backup`
-- **You can configure the file path on the backup server where backups are stored.** We can also allow using staging to both periodically restore a production backup and also give it the capability if required to backup it's own data to a different location using `backup_server_remote_target_directory` and `backup_server_remote_source_directory` Ansible variables. This use case is mostly meant for OpenCRVS team internal use.
-- **We now automate SSH key exchange between application and backup server.** For staging servers, automatically fetch production backup encryption key if periodic restore is enabled using `ansible_ssh_private_key_file` Ansible variables. Therefore documentation is simplified for a new server set-up.
-- **In infrastructure Github workflows: SSH_PORT is new and required allowing you the ability to use a non-standard SSH port.** This Github Action environment variable must be added.
-- **In infrastructure Github workflows: SSH_HOST** should be moved from being a Github Action environment secret to a Github Action environment variable before it is deprecated in 1.7.0
-- **No longer an assumption made that production server Docker replicas and Mongo replica-sets are necessary.** In our Docker Compose files, we had originally assumed that a production deployment would always be deployed on a cluster to enable load balancing. We applied a [Mongo replica set](https://github.com/opencrvs/opencrvs-countryconfig/blob/48cf278bab9d17e07b60b427294a26c8f35bcc1b/infrastructure/docker-compose.production-deploy.yml#L170C3-L201C19) by default on production and set [replicas: 2](https://github.com/opencrvs/opencrvs-countryconfig/blob/48cf278bab9d17e07b60b427294a26c8f35bcc1b/infrastructure/docker-compose.production-deploy.yml#L124) on each microservice. However after experience in multiple countries running small scale pilots, a production deployment usually starts off as 1 server node and then scales into a cluster over time in order to save costs and resources. Therefore these replicas are a waste of resources. So you will notice that this has been deleted. You can always manually add your desired replicas back into you Docker Compose configuration if you want. In Docker Compose files, search for REPLICAS and update accordingly as well as attending to the linked examples.
-
-Follow the descriptions in the migration notes to re-provision all servers safely.
+## 1.6.0 (TBD)
 
 ### New features
 
-- Introduced rate limiting to routes that could potentially be bruteforced or extracted PII from.
-- The login and client application loading experience has improved. A loading bar appears before the javaScript bundle has loaded and this transitions when fetching records.&#x20;
-- Development time logs are now much tidier and errors easier to point out. Production logging will still remain as is.&#x20;
-- Masked emails and phone numbers from notification logs.
-- Support for landscape certificate templates.
-- Allow defining maxLength attribute for number type fields.
-- A new certificate handlebar for registration fees has been added `registrationFees`
-- A new certificate handlebar for logged-in user details has been added `loggedInUser`&#x20;
-- Add support for image compression configuration. Two new properties to this form field are available: `DOCUMENT_UPLOADER_WITH_OPTION`
+- Certificate handlebar for registration fees `registrationFees` [#6817](https://github.com/opencrvs/opencrvs-core/issues/6817)
+- Logged in user details handlebar `loggedInUser` [#6529](https://github.com/opencrvs/opencrvs-core/issues/6529)
+- Supporting document fields can now be made required
+- If there is only one option in the document uploader select, then it stays hidden and only the upload button is showed with the only option being selected by default
+
+- #### ElasticSearch reindexing
+
+  Allows reindexing ElasticSearch via a new search-service endpoint `reindex`. We're replacing the original `ocrvs` index with timestamped ones. This is done automatically when upgrading and migrating, but this is an important architectural change that should be noted. More details in [#7033](https://github.com/opencrvs/opencrvs-core/pull/7033).
+
+- Introduce a new certificate handlebar "preview" which can be used to conditionally render some svg element when previewing the certificate e.g. background image similar to security paper
+
+### Improvements
+
+- Internally we were storing the `family` name field as a required property which was limiting what how you could capture the name of a person in the forms. Now we are storing it as an optional property which would make more flexible.
+
+### Breaking changes
+
+- Remove `DEL /elasticIndex` endpoint due reindexing changes.
+- Gateways searchEvents `operationHistories` only returns `operationType` & `operatedOn` due to the other fields being unused in OpenCRVS
+- Core used to provide review/preview section by default which are now removed and need to be provided from countryconfig. The signature field definitions (e.g. informant signature, bride signature etc.) were hard coded in core which also have now been removed. The signatures can now be added through the review/preview sections defined in countryconfig just like any other field. You can use the following section definition as the default which is without any additional fields. We highly recommend checking out our reference country repository which has the signature fields in it's review/preview sections
+
+```
+{
+  id: 'preview',
+  viewType: 'preview',
+  name: {
+    defaultMessage: 'Preview',
+    description: 'Form section name for Preview',
+    id: 'register.form.section.preview.name'
+  },
+  title: {
+    defaultMessage: 'Preview',
+    description: 'Form section title for Preview',
+    id: 'register.form.section.preview.title'
+  },
+  groups: [
+    {
+      id: 'preview-view-group',
+      fields: []
+    }
+  ]
+}
+```
+
+## 1.5.1
+
+## Improvements
+
+- Fetch child identifier in view record
+- Home screen application’s name and icons are to be configured from country configuration package as manifest.json and app icon files are moved from core to country config (check `opencrvs-countryconfig/src/client-static` folder)
+
+## Bug fixes
+
+- On slow connections or in rare corner cases, it was possible that the same record got saved to the database twice. This was caused by a bug in how the unique technical identifier we generate were stored as FHIR. The backend now ensures every record is submitted only once. [#7477](https://github.com/opencrvs/opencrvs-core/issues/7477)
+- Fixed an issue where address line fields (e.g., address line 1, address line 2, etc.) were not being updated correctly when a user attempted to update a record's event location, such as place of birth or place of death. [#7531](https://github.com/opencrvs/opencrvs-core/issues/7531)
+- Handle label params used in form inputs when rendering in review section view
+- Fix probable migration issues for countries migrating from 1.2 [#7464](https://github.com/opencrvs/opencrvs-core/issues/7464)
+- When a declaration(birth/death) is created the event location information was not being parsed to ElasticSearch which caused the Advanced search feature to not work when searching for records by event location.[7494](https://github.com/opencrvs/opencrvs-core/issues/7494)
+- When any user's role was updated, incorrect role was shown for that user's actions in the history section of a declaration's record audit page. [#7495](https://github.com/opencrvs/opencrvs-core/issues/7495)
+- Registration agent was unable to download declarations that were previously corrected by registrar. [#7582](https://github.com/opencrvs/opencrvs-core/issues/7582)
+- When a user updates a marriage declaration editing the signature of the bride, groom, witness one or witness two, handle the changed value of the signature properly. [#7462](https://github.com/opencrvs/opencrvs-core/issues/7462)
+- The internal function we used to check if all the location references listed in the encounter are included in the bundle had incorrect logic which resulted in location details missing in ElasticSearch which broke Advanced search. [7494](https://github.com/opencrvs/opencrvs-core/issues/7494)
+
+## 1.5.0 (TBD)
+
+## Breaking changes
+
+- #### Upgrade node version to 18
+
+  This version enforces environment to have Node 18 installed (supported until April 2025) and removes support for Node 16
+
+  - Supports node version `18.19.x`
+  - Specified operating systems in js modules as `darwin, linux`
+  - Dev scripts and Vite run with an environment variable `NODE_OPTIONS=--dns-result-order=ipv4first` to resolve ipv4 addresses for `localhost` to support systems that resolves ipv6 addresses by default in Node versions >=17
+
+- #### Update the certificate preview mechanism
+
+  In effort of minimizing JavaScript-bundle size, we have streamlined the way how review certificate -page renders certificates. In case the images in your certificates are previewing blurry, you need to update your SVG-certificates to print QR-codes and other images directly with `<image width="36" height="36" xlink:href="{{qrCode}}" x="500" y="770"></image>` instead of the more complicated `<rect fill="url(#pattern)"></rect>` -paradigm. This doesn't affect printed certificates as they are still created as previously.
+
+- #### Remove unused GraphQL resolvers locationById and locationsByParent
+
+- #### Remove unused GraphQL type `user.catchmentArea` in favor of `user.primaryOffice`
+
+- #### Move default address generation to country-config
+
+  We are dropping support for 'agentDefault' to be used as initial value for SELECT_WITH_DYNAMIC_OPTIONS type of fields. The country config package now must return the form with prepopulated initial values to show default addresses. [#6871](https://github.com/opencrvs/opencrvs-core/issues/6871)
+
+- #### Remove system admin UI items: Application, Certificates, User roles, Informant notifications
+
+  We have now moved to configuring these items directly from country configuration repository.
+
+## New features
+
+- Add loading spinners before JavaScript bundle has loaded for both login and client
+- Add loading bar before javaScript bundle has loaded for client and when fetching records [#6641](https://github.com/opencrvs/opencrvs-core/issues/6641)
+- Support for landscape certificate templates
+- Allow defining maxLength attribute for number type fields [#6356](https://github.com/opencrvs/opencrvs-core/issues/6356)
+- Introduce two new properties to the form field `DOCUMENT_UPLOADER_WITH_OPTION`
   - `compressImagesToSizeMB` : An optional prop of number type to define a compressed size. Compression is ignored when the input file is already smaller or equal of the given value or a falsy given value.
   - `maxSizeMB`: An optional validation prop to prevent input of a file bigger than a defined value.
-- If a country doesnt wish to use Sentry for logging errors, the SENTRY_DSN variable is now optional and the LogRocket option has been deprecated due to lack of demand.
-- Given that upon an upgrade between versions of OpenCRVS, that users cache is cleared, it is important to inform staff to submit any draft applications before the upgrade date. We introduced an "Email all users" feature so that National System Admins can send all staff messages. This feature can be used for any other all staff comms that are deemed required.
+- Metabase default credentials now must be configured via countryconfig repository environment variables and secrets otherwise the dashboard service won't start [#6578](https://github.com/opencrvs/opencrvs-core/issues/6578)
+- Introduce rate limiting to routes that could potentially be bruteforced or extracted PII from [#6145](https://github.com/opencrvs/opencrvs-core/pull/6145)
 
-<figure><img src="../../.gitbook/assets/Screenshot 2024-06-25 at 17.12.54.png" alt=""><figcaption></figcaption></figure>
+## Improvements
 
-- Included an endpoint for serving individual certificates in development mode. This improves the developer experience when configuring certificates.
-- Removed logrocket refrences.
-- Enable gzip compression in client & login
-- Use docker compose v2 in github workflows
-- Added SMTP environment variables into the qa compose file to enable QA of SMTP servers.
-- In the certificate, the 'Place of Certification' now accurately reflects the correct location.
-- Groom's and Bride's name, printIssue translation variables updated [#124](https://github.com/opencrvs/opencrvs-countryconfig/pull/124)
-- Add query mapper for International Postal Code field
-- Add support for image compression configuration
-- Provide env variables for metabase admin credentials
-- Improved formatting of informant name for inProgress declaration emails
-- There is now an option to print the review page of an event declaration form. The PRINT_DECLARATION feature flag in application config settings can enable this on or off.
-
-### New content keys requiring translation
-
-```
-advancedSearch.form.recordStatusCorrectionRequested,Option for form field: status of record,Correction requested
-config.emailAllUsers.modal.supportingCopy,Label for send email all users confirmation supporting copy,User will receive emails over the next 24 hours
-config.emailAllUsers.modal.title,Label for send email all users confirmation title,Send email to all users?
-config.emailAllUsers.subtitle,Subtitle for email all users,This email will be sent to all users you are active. Emails will be sent over the next 24 hours. Only one email can be sent per day
-config.emailAllUsers.title,Title for email all users,Email all users
-config.userRoles.language,Language name,"{language, select, en {English} fr {French} other {{language}}}"
-constants.emailBody,Label for email body input,Message
-constants.emailSubject,Label for email subject input,Subject
-correction.correctionForApprovalDialog.actions.cancel,The cancel button for the dialog when record correction sent by registration agent for approval,Cancel
-correction.correctionForApprovalDialog.actions.send,The send button for the dialog when record correction sent by registration agent for approval,Confirm
-correction.correctionForApprovalDialog.description,The description for the dialog when record correction sent by registration agent for approval,The Registrar will be notified of this correction request and a record of this request will be recorded
-correction.correctionForApprovalDialog.title,The title for the dialog when record correction sent by registration agent for approval,Send record correction for approval ?
-correction.correctRecordDialog.description,The description for the dialog when record correction sent by a registrar,The informant will be notified of this correction and a record of this decision will be recorded
-correction.correctRecordDialog.title,The title for the dialog when record correction sent by a registrar,Correct record ?
-correction.summary.office,Office where certificate correction summary was submitted,Office
-correction.summary.requestedOn,Date when certificate correction summary was submitted,Requested on
-correction.summary.submitter,Submitter of certificate correction summary,Submitter
-form.customField.label.numberOfDependants,,No. of dependants
-form.customField.label.reasonForLateRegistrationBirth,,Reason for delayed registration
-form.customField.label.reasonForLateRegistrationDeath,,Reason for late registration
-form.field.helpertext.nid,Helper text for nid input field,The National ID can only be numeric and must be 10 digits long
-form.field.label.addressLine1RuralOption,,Village
-form.field.label.addressLine1UrbanOption,,Residential Area
-form.field.label.addressLine2UrbanOption,,Street
-form.field.label.app.certifyRecordTo.bride,,Print and issue to bride
-form.field.label.app.certifyRecordTo.groom,,Print and issue to groom
-form.field.label.attendantAtBirthLayperson,,Layperson
-form.field.label.cityUrbanOption,Label for City,Town
-form.field.label.empty,empty string,
-form.field.label.informantsRelationWithChild,,Relationship to child
-form.field.label.maritalStatusSeparated,,Separated
-form.field.label.relationOtherFamilyMember,Label for other family member relation,Other family member
-form.field.label.totalFees,Label for input Reason for Change,
-form.field.nidVerificationOngoing,Label for indicating offline status for the user. NID verification is not currently available offline.,National ID authentication is currently not available offline.
-form.section.deceased.relationship,,Relationship to deceased
-form.section.witnessOne.name,Form section name for Witness one,Witness 1
-form.section.witnessTwo.name,Form section name for Witness two,Witness 2
-home.header.placeHolderId,,Search for an ID
-misc.notif.emailAllUsersError,Label for Email all users error toast,Only one email can be sent per day
-misc.notif.emailAllUsersSuccess,Label for Email all users success toast,Email sent to all users
-navigation.emailAllUsers,Email all users label in navigation,Email all users
-number.twelve,Minimum length password,12
-phone.digit,,10
-phone.start,Should starts with,0(4|5)
-recordAudit.regAction.markedAsNotDuplicate,Marked not a duplicate status message for record audit,Marked not a duplicate
-recordAudit.regAction.verified,Verified action,Certificate verified
-recordAudit.regStatus.correctionRequested,Label for when someone requested correction,Correction requested
-regHome.outbox.failed,Label for declaration status failed,Failed to send
-regHome.outbox.retry,Label for Retry button in Outbox shown for records that failed to send,Retry
-register.form.modal.desc.saveCorrectionConfirm,Description for save correction confirmation modal,The declarant will be notified of this correction and a record of this decision will be recorded
-register.form.modal.desc.saveCorrectionReject,Description for reject correction modal,The declarant will be notified of this decision and a record of this decision will be recorded
-register.form.modal.title.saveCorrectionConfirm,Title for save correction confirmation modal,Approve correction?
-register.form.modal.title.saveCorrectionReject,Title for reject correction modal,Reject correction?
-register.selectInformant.birthInformantTitle,Who is applying for birth registration,Informant type
-system.user.settings.language,Language name,"{language, select, en {English} fr {Français} other {{language}}}"
-user.profile.auditList.approvedCorrectionAuditAction,Description for record correction being approved,Approved correction request
-user.profile.auditList.rejectedCorrectedAuditAction,Description for record correction being rejected,Rejected correction request
-user.profile.auditList.requestedCorrectionAuditAction,Description for record correction being requested,Requested correction
-validations.invalidDate,The error message that appears when a date field is invalid,Invalid date field
-verifyCertificate.certifiedAt,Label for date of certification,Date of certification
-```
+- Development time logs are now much tidier and errors easier to point out. Production logging will still remain as is. [#7022](https://github.com/opencrvs/opencrvs-core/pull/7022)
+- Mask emails and phone numbers from notification logs [#7204](https://github.com/opencrvs/opencrvs-core/pull/7204)
 
 ## Bug fixes
 
@@ -150,7 +119,7 @@ verifyCertificate.certifiedAt,Label for date of certification,Date of certificat
 - Fix certificate verification QR code crashing when gender is unknown [#6422](https://github.com/opencrvs/opencrvs-core/issues/6422)
 - Fix certificate verification page missing registration center and the name of registrar [#6614](https://github.com/opencrvs/opencrvs-core/issues/6614)
 - Amend certificate verification showing the certifying date instead of records creation date [#7098](https://github.com/opencrvs/opencrvs-core/pull/7098)
-- Fix records not getting issued \[#6216] (https://github.com/opencrvs/opencrvs-core/issues/6216)
+- Fix records not getting issued [#6216] (https://github.com/opencrvs/opencrvs-core/issues/6216)
 - Fix record correction e2e failing due to stale data getting saved on redux
 - Convert eventDates to LocalDate before formatting [#6719](https://github.com/opencrvs/opencrvs-core/issues/6719)
 - In advance search, any status tag is showing archived after search [#6678](https://github.com/opencrvs/opencrvs-core/issues/6678)
@@ -159,32 +128,32 @@ verifyCertificate.certifiedAt,Label for date of certification,Date of certificat
 - Fix certificate templates not getting populated for health facility event locations & ADMIN_LEVEL > 2
 - Fix download failure for incomplete (without date of death) death declarations [#6807](https://github.com/opencrvs/opencrvs-core/issues/6807)
 - Fix search result declaration record audit unassign issue [#5781](https://github.com/opencrvs/opencrvs-core/issues/5781)
-- In review page, Eliminating the 'No supporting documents' and 'upload' prompts when documents are already uploaded [#6231](https://github.com/opencrvs/opencrvs-core/issues/6231)
-- In record audit page, after 'Correction request approved' the “record corrected” action is removed from history [#6228](https://github.com/opencrvs/opencrvs-core/issues/6228)
+- In review page, Eliminating the 'No supporting documents' and 'upload' prompts when documents are already uploaded [#6231] (https://github.com/opencrvs/opencrvs-core/issues/6231)
 - Fix Registrar of any location should be able to review a correction request [#6247](https://github.com/opencrvs/opencrvs-core/issues/6247)
 - remove upload button when no supporting docs are configured [#5944](https://github.com/opencrvs/opencrvs-core/issues/5944)
 - Fix issues of invisible inputs when navigating from can't login link in login page [#6163](https://github.com/opencrvs/opencrvs-core/issues/6163)
 - Fix the "Continue" button being disabled when changes in correction form is made [#6780](https://github.com/opencrvs/opencrvs-core/issues/6780)
 - Remove leading slash from `resendAuthenticationCode` in login to fix resend email button [#6987](https://github.com/opencrvs/opencrvs-core/issues/6987) [#7037](https://github.com/opencrvs/opencrvs-core/issues/7037)
-- Fix 'Place of Certification' is showing wrong in certificate \[#7060] (https://github.com/opencrvs/opencrvs-core/issues/7060)
 - Fix dashboard cron jobs not working [#7016](https://github.com/opencrvs/opencrvs-core/issues/7016)
+- Fix client modal glitches on integrations page [#7002] (https://github.com/opencrvs/opencrvs-core/issues/7002)
+- Fix 'Place of Certification' is showing wrong in certificate [#7060] (https://github.com/opencrvs/opencrvs-core/issues/7060)
 - Fix Check for valid date to handle incomplete marriage declarations [#7017](https://github.com/opencrvs/opencrvs-core/issues/7017)
 - Fix session expiration when user tries to change phone number [#7003](https://github.com/opencrvs/opencrvs-core/pull/7025)
-- Fix French translation missing for relationship to informant when trying to correct record, print and issue record \[#6341] (https://github.com/opencrvs/opencrvs-core/issues/6341)
-- Fix client modal glitches on integrations page [#7002](https://github.com/opencrvs/opencrvs-core/issues/7002)
+- Fix French translation missing for relationship to informant when trying to correct record, print and issue record [#6341] (https://github.com/opencrvs/opencrvs-core/issues/6341)
 - Fix print record page for an unsaved declaration [#6893](https://github.com/opencrvs/opencrvs-core/issues/6893)
 - Fix Reset pagination to default page (1) when location changes in UserList [#6481](https://github.com/opencrvs/opencrvs-core/issues/6481)
+- Fix unassign action not appearing in audit history [#7035](https://github.com/opencrvs/opencrvs-core/pull/7072)
+- Fix client modal glitches on integrations page [#7002](https://github.com/opencrvs/opencrvs-core/issues/7002)
+- Fix address property handling and corrected country data transformation logic [#6989](https://github.com/opencrvs/opencrvs-core/issues/6989)
+- Fix "Print and issue to groom|bride" is added to a different variable [#7066](https://github.com/opencrvs/opencrvs-core/pull/7066)
+- Fix search query is not being saved in the advanced search results [#7110](https://github.com/opencrvs/opencrvs-core/pull/7117)
+- Fix Removed duplicateTrackingId check in createDuplicateTask method [#7081](https://github.com/opencrvs/opencrvs-core/pull/7081)
 - Fix Disabling 'Mark as duplicate' button when duplicate reason is empty too [#7083](https://github.com/opencrvs/opencrvs-core/pull/7083)
+- Fix correction done from a certificate preview page [#7065](https://github.com/opencrvs/opencrvs-core/pull/7093)
 - Fix certificate overflowing in preview certificate view [#7157](https://github.com/opencrvs/opencrvs-core/pull/7157)
 - Fix records going completely missing when an unexpected error happens in the backend [#7021](https://github.com/opencrvs/opencrvs-core/pull/7021)
-- Fix correction done from a certificate preview page [#7065](https://github.com/opencrvs/opencrvs-core/pull/7093)
-- Fix "Print and issue to groom|bride" is added to a different variable [#7046](https://github.com/opencrvs/opencrvs-core/issues/7046)
-- Fix search query is not being saved in the advanced search results [#7110](https://github.com/opencrvs/opencrvs-core/pull/7117)
-- Fix removed duplicateTrackingId check in createDuplicateTask method [#7024](https://github.com/opencrvs/opencrvs-core/issues/7024)
-- Fix address property handling and corrected country data transformation logic [#6989](https://github.com/opencrvs/opencrvs-core/issues/6989)
 - Fix search indexing BRN's in place of identifiers. Adds spouseIdentifier to search with [#7189](https://github.com/opencrvs/opencrvs-core/pull/7189)
 - Rename `farajaland-map.geojson` in dashboards to `map.geojson` to not tie opencrvs-core into a specific country implementation name [#7251](https://github.com/opencrvs/opencrvs-core/pull/7251)
-- Fix unassign action not appearing in audit history [#7035](https://github.com/opencrvs/opencrvs-core/pull/7072)
 - Update advanced search list properly when assignments change [#7307](https://github.com/opencrvs/opencrvs-core/pull/7307)
 - Update Content-Security-Policy to allow loading fonts from country configuration [#7296](https://github.com/opencrvs/opencrvs-core/pull/7296)
 - Fix frontend crashing on 'Registration by Status' under performance due to missing translations [#7129](https://github.com/opencrvs/opencrvs-core/pull/7129)
