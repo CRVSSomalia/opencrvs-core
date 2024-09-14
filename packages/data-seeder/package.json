@@ -1,6 +1,6 @@
 {
   "name": "@opencrvs/data-seeder",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "OpenCRVS data-seeder microservice",
   "homepage": "https://github.com/opencrvs/opencrvs-core#readme",
   "license": "MPL-2.0",
@@ -14,7 +14,7 @@
     "@typescript-eslint/parser": "^4.5.0",
     "eslint": "^7.11.0",
     "eslint-config-prettier": "^9.0.0",
-    "lint-staged": "^7.1.0",
+    "lint-staged": "^15.0.0",
     "prettier": "2.8.8"
   },
   "dependencies": {

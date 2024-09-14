@@ -21,6 +21,7 @@ import {
   dynamicConstantsMessages,
   userMessages
 } from '@client/i18n/messages'
+import { messages as reviewSectionMessages } from '@client/i18n/messages/views/review'
 import { getIndividualNameObj, UserDetails } from '@client/utils/userUtils'
 import { History, RegAction, RegStatus } from '@client/utils/gateway'
 import { messages } from '@client/i18n/messages/views/correction'
@@ -44,11 +45,13 @@ import { Pill } from '@opencrvs/components/lib/Pill'
 import { recordAuditMessages } from '@client/i18n/messages/views/recordAudit'
 import { formatLongDate } from '@client/utils/date-formatting'
 import { EMPTY_STRING } from '@client/utils/constants'
+import { IReviewFormState } from '@client/forms/register/reviewReducer'
 
 interface IActionDetailsModalListTable {
   actionDetailsData: History
   actionDetailsIndex: number
   registerForm: IForm
+  reviewForm: IReviewFormState
   intl: IntlShape
   offlineData: Partial<IOfflineData>
   draft: IDeclaration | null
@@ -207,6 +210,7 @@ const ActionDetailsModalListTable = ({
   actionDetailsData,
   actionDetailsIndex,
   registerForm,
+  reviewForm,
   intl,
   offlineData,
   draft
@@ -215,7 +219,8 @@ const ActionDetailsModalListTable = ({
 
   if (registerForm === undefined) return <></>
 
-  const sections = registerForm?.sections || []
+  const event = draft?.event || 'birth'
+  const sections = reviewForm.reviewForm?.[event].sections || []
   const requesterColumn = [
     {
       key: 'requester',
@@ -322,7 +327,7 @@ const ActionDetailsModalListTable = ({
         (section) => section.id === item?.valueCode
       ) as IFormSection
 
-      if (section.id === 'documents') {
+      if (['documents', 'review', 'preview'].includes(section.id)) {
         item.value = EMPTY_STRING
         editedValue.value = intl.formatMessage(dynamicConstantsMessages.updated)
       }
@@ -356,6 +361,17 @@ const ActionDetailsModalListTable = ({
         }
       } else {
         const [parentField] = indexes
+
+        if (section.id === 'review')
+          result.push({
+            item: getItemName(
+              section.name,
+              reviewSectionMessages[
+                parentField as keyof typeof reviewSectionMessages
+              ]
+            ),
+            edit: intl.formatMessage(dynamicConstantsMessages.updated)
+          })
 
         const fieldObj = flatten(
           section.groups.map((group) => {
@@ -625,6 +641,7 @@ export const ActionDetailsModal = ({
   userDetails,
   goToUser,
   registerForm,
+  reviewForm,
   offlineData,
   draft
 }: {
@@ -636,6 +653,7 @@ export const ActionDetailsModal = ({
   userDetails: UserDetails | null
   goToUser: typeof goToUserProfile
   registerForm: IForm
+  reviewForm: IReviewFormState
   offlineData: Partial<IOfflineData>
   draft: IDeclaration | null
 }) => {
@@ -695,6 +713,7 @@ export const ActionDetailsModal = ({
           actionDetailsData={actionDetailsData}
           actionDetailsIndex={actionDetailsIndex}
           registerForm={registerForm}
+          reviewForm={reviewForm}
           intl={intl}
           offlineData={offlineData}
           draft={draft}

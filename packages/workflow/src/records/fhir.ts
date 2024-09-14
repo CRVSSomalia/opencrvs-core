@@ -50,7 +50,9 @@ import {
   isTask,
   urlReferenceToResourceIdentifier,
   RegistrationStatus,
-  getResourceFromBundleById
+  getResourceFromBundleById,
+  TaskIdentifierSystem,
+  Location
 } from '@opencrvs/commons/types'
 import { FHIR_URL } from '@workflow/constants'
 import fetch from 'node-fetch'
@@ -1446,8 +1448,11 @@ export function mergeBundles<T extends Bundle, R extends Bundle>(
 export async function findTaskFromIdentifier(
   identifier: string
 ): Promise<Bundle<SavedTask>> {
+  const system =
+    'http://opencrvs.org/specs/id/draft-id' satisfies TaskIdentifierSystem
+
   const res = await fetch(
-    new URL(`/fhir/Task?identifier=${identifier}`, FHIR_URL).href,
+    new URL(`/fhir/Task?identifier=${system}|${identifier}`, FHIR_URL).href,
     {
       method: 'GET',
       headers: {
@@ -1489,4 +1494,25 @@ export function sortTasksDescending(tasks: Task[]) {
       new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
     )
   })
+}
+
+export async function getLocationsById(
+  locationIds: Array<string>
+): Promise<Bundle<Location>> {
+  const res = await fetch(
+    new URL(`/fhir/Location?_id=${locationIds.join(',')}`, FHIR_URL).href,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/fhir+json'
+      }
+    }
+  )
+  if (!res.ok) {
+    throw new Error(
+      `Fetching locations from Hearth failed with [${res.status}] body: ${res.statusText}`
+    )
+  }
+
+  return res.json()
 }
