@@ -150,6 +150,13 @@ const DEFAULT_SYSTEM_ROLES = [
   },
 
   {
+    title: 'Super system admin (national)',
+    value: 'SUPER_NATIONAL_SYSTEM_ADMIN',
+    roles: ['SUPER_NATIONAL_SYSTEM_ADMIN'],
+    active: true
+  },
+
+  {
     title: 'Performance Management',
     value: 'PERFORMANCE_MANAGEMENT',
     roles: ['PERFORMANCE_MANAGEMENT'],

@@ -17,8 +17,9 @@ import {
 import { userMessages } from '@client/i18n/messages'
 import { IntlShape, MessageDescriptor } from 'react-intl'
 import { messages } from '@client/i18n/messages/views/userSetup'
-import { SystemRoleType } from '@client/utils/gateway'
+import { SystemRoleType, User } from '@client/utils/gateway'
 import { ILocation, IOfflineData } from '@client/offline/reducer'
+import { UserDetails } from '@client/utils/userUtils'
 
 export enum UserStatus {
   ACTIVE,
@@ -108,10 +109,28 @@ export function getUserSystemRole(
       return intl.formatMessage(userMessages.LOCAL_SYSTEM_ADMIN)
     case SystemRoleType.NationalSystemAdmin:
       return intl.formatMessage(userMessages.NATIONAL_SYSTEM_ADMIN)
+    case SystemRoleType.SuperNationalSystemAdmin:
+      return intl.formatMessage(userMessages.SUPER_NATIONAL_SYSTEM_ADMIN)
     case SystemRoleType.PerformanceManagement:
       return intl.formatMessage(userMessages.PERFORMANCE_MANAGEMENT)
     default:
       return undefined
+  }
+}
+
+export function canDeactivateUser(
+  user: User,
+  userDetails: UserDetails
+): boolean {
+  if (
+    user.systemRole === 'SUPER_NATIONAL_SYSTEM_ADMIN' &&
+    userDetails.systemRole === 'NATIONAL_SYSTEM_ADMIN'
+  ) {
+    return false
+  } else if (user.id !== userDetails.id) {
+    return true
+  } else {
+    return false
   }
 }
 

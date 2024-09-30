@@ -45,6 +45,10 @@ export const userRoleScopes = {
     userScopes.systemAdmin,
     userScopes.nationalSystemAdmin
   ],
+  SUPER_NATIONAL_SYSTEM_ADMIN: [
+    userScopes.systemAdmin,
+    userScopes.nationalSystemAdmin
+  ],
   PERFORMANCE_MANAGEMENT: [userScopes.performance],
   NATIONAL_REGISTRAR: [
     userScopes.register,

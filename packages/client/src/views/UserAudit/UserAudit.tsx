@@ -122,6 +122,9 @@ function canEditUserDetails(
   if (loggedInUser.systemRole === SystemRoleType.NationalSystemAdmin) {
     return true
   }
+  if (loggedInUser.systemRole === SystemRoleType.SuperNationalSystemAdmin) {
+    return true
+  }
   const usersInTheSameOffice =
     loggedInUser.primaryOffice?.id === targetUser?.primaryOffice?.id
 

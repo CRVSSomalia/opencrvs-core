@@ -2303,6 +2303,7 @@ export enum SystemRoleType {
   LocalSystemAdmin = 'LOCAL_SYSTEM_ADMIN',
   NationalRegistrar = 'NATIONAL_REGISTRAR',
   NationalSystemAdmin = 'NATIONAL_SYSTEM_ADMIN',
+  SuperNationalSystemAdmin = 'SUPER_NATIONAL_SYSTEM_ADMIN',
   PerformanceManagement = 'PERFORMANCE_MANAGEMENT',
   RegistrationAgent = 'REGISTRATION_AGENT'
 }

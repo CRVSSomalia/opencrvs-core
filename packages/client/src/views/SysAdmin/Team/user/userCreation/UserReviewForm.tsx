@@ -183,7 +183,10 @@ class UserReviewFormComponent extends React.Component<
               actions:
                 !(
                   field.name === 'registrationOffice' &&
-                  this.props.userDetails?.systemRole !== 'NATIONAL_SYSTEM_ADMIN'
+                  this.props.userDetails?.systemRole !==
+                    'NATIONAL_SYSTEM_ADMIN' &&
+                  this.props.userDetails?.systemRole !==
+                    'SUPER_NATIONAL_SYSTEM_ADMIN'
                 ) && !field.readonly ? (
                   <Link
                     id={`btn_change_${field.name}`}

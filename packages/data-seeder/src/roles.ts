@@ -32,6 +32,7 @@ const CountryRoleSchema = z.object({
   LOCAL_SYSTEM_ADMIN: LabelSchema.optional(),
   NATIONAL_REGISTRAR: LabelSchema.optional(),
   NATIONAL_SYSTEM_ADMIN: LabelSchema,
+  SUPER_NATIONAL_SYSTEM_ADMIN: LabelSchema,
   PERFORMANCE_MANAGEMENT: LabelSchema.optional(),
   REGISTRATION_AGENT: LabelSchema.optional()
 })
@@ -42,6 +43,7 @@ const SYSTEM_ROLES = [
   'LOCAL_SYSTEM_ADMIN',
   'NATIONAL_REGISTRAR',
   'NATIONAL_SYSTEM_ADMIN',
+  'SUPER_NATIONAL_SYSTEM_ADMIN',
   'PERFORMANCE_MANAGEMENT',
   'REGISTRATION_AGENT'
 ] as const

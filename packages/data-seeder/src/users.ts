@@ -29,6 +29,7 @@ const WithoutContact = z.object({
     'LOCAL_REGISTRAR',
     'LOCAL_SYSTEM_ADMIN',
     'NATIONAL_SYSTEM_ADMIN',
+    'SUPER_NATIONAL_SYSTEM_ADMIN',
     'PERFORMANCE_MANAGEMENT',
     'NATIONAL_REGISTRAR'
   ]),
@@ -176,6 +177,7 @@ export async function seedUsers(
       )
       continue
     }
+    console.log(JSON.stringify(roleIdMap))
     if (!roleIdMap[role]) {
       console.log(
         `Role "${role}" is not recognized by system. Skipping user "${username}"`

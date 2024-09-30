@@ -52,6 +52,13 @@ const DEFAULT_SYSTEM_ROLES = [
   },
 
   {
+    title: 'Super system admin (national)',
+    value: 'SUPER_NATIONAL_SYSTEM_ADMIN',
+    roles: [],
+    active: true
+  },
+
+  {
     title: 'Performance Management',
     value: 'PERFORMANCE_MANAGEMENT',
     roles: [],

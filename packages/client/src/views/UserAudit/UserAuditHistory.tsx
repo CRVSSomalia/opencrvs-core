@@ -252,6 +252,7 @@ class UserAuditHistoryComponent extends React.Component<Props, State> {
 
       const isSystemAdmin =
         this.props.loggedInUserRole === 'NATIONAL_SYSTEM_ADMIN' ||
+        this.props.loggedInUserRole === 'SUPER_NATIONAL_SYSTEM_ADMIN' ||
         this.props.loggedInUserRole === 'LOCAL_SYSTEM_ADMIN'
 
       return {

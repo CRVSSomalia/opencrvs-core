@@ -148,6 +148,7 @@
         "constants.name": "Name",
         "constants.nationalRegistrar": "National Registrar",
         "constants.nationalSystemAdmin": "System admin (national)",
+        "constants.superNationalSystemAdmin": "Super system admin (national)",
         "constants.noNameProvided": "No name provided",
         "constants.noResults": "No result to display",
         "constants.noUsers": "No users",

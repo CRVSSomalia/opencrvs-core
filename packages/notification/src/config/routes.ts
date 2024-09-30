@@ -70,7 +70,8 @@ const enum RouteScope {
   REGISTER = 'register',
   CERTIFY = 'certify',
   SYSADMIN = 'sysadmin',
-  NATIONAL_SYSTEM_ADMIN = 'natlsysadmin'
+  NATIONAL_SYSTEM_ADMIN = 'natlsysadmin',
+  SUPER_NATIONAL_SYSTEM_ADMIN = 'natlsysadmin'
 }
 
 const recordValidation: RouteOptionsValidate = {

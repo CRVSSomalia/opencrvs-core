@@ -258,7 +258,8 @@ export function App(props: IAppProps) {
                                             <ProtectedRoute
                                               exact
                                               roles={[
-                                                SystemRoleType.NationalSystemAdmin
+                                                SystemRoleType.NationalSystemAdmin,
+                                                SystemRoleType.SuperNationalSystemAdmin
                                               ]}
                                               path={routes.CERTIFICATE_CONFIG}
                                               component={CertificatesConfig}
@@ -266,7 +267,8 @@ export function App(props: IAppProps) {
                                             <ProtectedRoute
                                               exact
                                               roles={[
-                                                SystemRoleType.NationalSystemAdmin
+                                                SystemRoleType.NationalSystemAdmin,
+                                                SystemRoleType.SuperNationalSystemAdmin
                                               ]}
                                               path={
                                                 routes.INFORMANT_NOTIFICATION
@@ -276,7 +278,8 @@ export function App(props: IAppProps) {
                                             <ProtectedRoute
                                               exact
                                               roles={[
-                                                SystemRoleType.NationalSystemAdmin
+                                                SystemRoleType.NationalSystemAdmin,
+                                                SystemRoleType.SuperNationalSystemAdmin
                                               ]}
                                               path={routes.ALL_USER_EMAIL}
                                               component={AllUserEmail}
@@ -370,6 +373,7 @@ export function App(props: IAppProps) {
                                                 SystemRoleType.LocalRegistrar,
                                                 SystemRoleType.LocalSystemAdmin,
                                                 SystemRoleType.NationalSystemAdmin,
+                                                SystemRoleType.SuperNationalSystemAdmin,
                                                 SystemRoleType.PerformanceManagement
                                               ]}
                                               path={routes.TEAM_SEARCH}
@@ -383,6 +387,7 @@ export function App(props: IAppProps) {
                                                 SystemRoleType.LocalSystemAdmin,
                                                 SystemRoleType.NationalRegistrar,
                                                 SystemRoleType.NationalSystemAdmin,
+                                                SystemRoleType.SuperNationalSystemAdmin,
                                                 SystemRoleType.PerformanceManagement
                                               ]}
                                               path={routes.TEAM_USER_LIST}
@@ -391,7 +396,8 @@ export function App(props: IAppProps) {
                                             <ProtectedRoute
                                               exact
                                               roles={[
-                                                SystemRoleType.NationalSystemAdmin
+                                                SystemRoleType.NationalSystemAdmin,
+                                                SystemRoleType.SuperNationalSystemAdmin
                                               ]}
                                               path={routes.SYSTEM_LIST}
                                               component={SystemList}
@@ -430,6 +436,7 @@ export function App(props: IAppProps) {
                                                 SystemRoleType.LocalRegistrar,
                                                 SystemRoleType.LocalSystemAdmin,
                                                 SystemRoleType.NationalSystemAdmin,
+                                                SystemRoleType.SuperNationalSystemAdmin,
                                                 SystemRoleType.PerformanceManagement,
                                                 SystemRoleType.NationalRegistrar
                                               ]}
@@ -441,6 +448,7 @@ export function App(props: IAppProps) {
                                               roles={[
                                                 SystemRoleType.LocalSystemAdmin,
                                                 SystemRoleType.NationalSystemAdmin,
+                                                SystemRoleType.SuperNationalSystemAdmin,
                                                 SystemRoleType.PerformanceManagement,
                                                 SystemRoleType.NationalRegistrar
                                               ]}
@@ -454,6 +462,7 @@ export function App(props: IAppProps) {
                                               roles={[
                                                 SystemRoleType.LocalSystemAdmin,
                                                 SystemRoleType.NationalSystemAdmin,
+                                                SystemRoleType.SuperNationalSystemAdmin,
                                                 SystemRoleType.PerformanceManagement,
                                                 SystemRoleType.NationalRegistrar
                                               ]}
@@ -467,6 +476,7 @@ export function App(props: IAppProps) {
                                               roles={[
                                                 SystemRoleType.LocalSystemAdmin,
                                                 SystemRoleType.NationalSystemAdmin,
+                                                SystemRoleType.SuperNationalSystemAdmin,
                                                 SystemRoleType.PerformanceManagement,
                                                 SystemRoleType.NationalRegistrar
                                               ]}
@@ -479,6 +489,7 @@ export function App(props: IAppProps) {
                                               exact
                                               roles={[
                                                 SystemRoleType.NationalSystemAdmin,
+                                                SystemRoleType.SuperNationalSystemAdmin,
                                                 SystemRoleType.NationalRegistrar
                                               ]}
                                               path={routes.VS_EXPORTS}

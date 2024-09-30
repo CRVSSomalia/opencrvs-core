@@ -49,6 +49,7 @@ interface IUserMessages
   MOTHER_NAME: MessageDescriptor
   NATIONAL_REGISTRAR: MessageDescriptor
   NATIONAL_SYSTEM_ADMIN: MessageDescriptor
+  SUPER_NATIONAL_SYSTEM_ADMIN: MessageDescriptor
   ORG_DIVISION: MessageDescriptor
   PERFORMANCE_MANAGEMENT: MessageDescriptor
   profileTitle: MessageDescriptor
@@ -272,6 +273,11 @@ const messagesToDefine: IUserMessages = {
     defaultMessage: 'System admin (national)',
     description: 'The description for System admin (national)',
     id: 'constants.nationalSystemAdmin'
+  },
+  SUPER_NATIONAL_SYSTEM_ADMIN: {
+    defaultMessage: 'Super system admin (national)',
+    description: 'The description for Super system admin (national)',
+    id: 'constants.superNationalSystemAdmin'
   },
   ORG_DIVISION: {
     defaultMessage: 'ORG Division',

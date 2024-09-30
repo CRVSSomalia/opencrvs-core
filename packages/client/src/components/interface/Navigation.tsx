@@ -188,6 +188,17 @@ const USER_SCOPE: IUSER_SCOPE = {
     GROUP_ID.menuGroup,
     GROUP_ID.analytics
   ],
+  SUPER_NATIONAL_SYSTEM_ADMIN: [
+    WORKQUEUE_TABS.team,
+    WORKQUEUE_TABS.config,
+    WORKQUEUE_TABS.organisation,
+    WORKQUEUE_TABS.vsexports,
+    WORKQUEUE_TABS.communications,
+    WORKQUEUE_TABS.userRoles,
+    WORKQUEUE_TABS.informantNotification,
+    GROUP_ID.menuGroup,
+    GROUP_ID.analytics
+  ],
   PERFORMANCE_MANAGEMENT: [GROUP_ID.menuGroup, GROUP_ID.analytics]
 }
 

@@ -37,6 +37,7 @@ import {
 import { createNamesMap } from '@client/utils/data-formatting'
 import { SysAdminContentWrapper } from '@client/views/SysAdmin/SysAdminContentWrapper'
 import {
+  canDeactivateUser,
   getAddressName,
   getUserRoleIntlKey,
   UserStatus
@@ -396,7 +397,7 @@ function UserListComponent(props: IProps) {
   )
 
   const getMenuItems = useCallback(
-    function getMenuItems(user: User) {
+    function getMenuItems(user: User, userDetails: UserDetails | null) {
       const menuItems = [
         {
           label: intl.formatMessage(messages.editUserDetailsTitle),
@@ -432,7 +433,11 @@ function UserListComponent(props: IProps) {
         })
       }
 
-      if (user.status === 'active') {
+      if (
+        userDetails &&
+        user.status === 'active' &&
+        canDeactivateUser(user, userDetails)
+      ) {
         menuItems.push({
           label: intl.formatMessage(messages.deactivate),
           handler: () => toggleUserActivationModal(user)
@@ -511,6 +516,7 @@ function UserListComponent(props: IProps) {
     }) {
       const canEditUserDetails =
         userDetails?.systemRole === 'NATIONAL_SYSTEM_ADMIN' ||
+        userDetails?.systemRole === 'SUPER_NATIONAL_SYSTEM_ADMIN' ||
         (userDetails?.systemRole === 'LOCAL_SYSTEM_ADMIN' &&
           userDetails?.primaryOffice?.id === locationId)
           ? true
@@ -530,7 +536,7 @@ function UserListComponent(props: IProps) {
               toggleButton={
                 <Icon name="DotsThreeVertical" color="primary" size="large" />
               }
-              menuItems={getMenuItems(user)}
+              menuItems={getMenuItems(user, userDetails)}
             />
           )}
         </Stack>
