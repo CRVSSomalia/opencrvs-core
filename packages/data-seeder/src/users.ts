@@ -177,7 +177,6 @@ export async function seedUsers(
       )
       continue
     }
-    console.log(JSON.stringify(roleIdMap))
     if (!roleIdMap[role]) {
       console.log(
         `Role "${role}" is not recognized by system. Skipping user "${username}"`
