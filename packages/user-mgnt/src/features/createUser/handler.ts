@@ -42,7 +42,6 @@ export default async function createUser(
   const user = request.payload as IUser & { password?: string }
   const token = request.headers.authorization
   if (!getValidRoles({}, 'asc', 'creationDate', token, user.systemRole)) {
-    // return 400 if there is a role validation error
     return h.response().code(400)
   }
 

@@ -70,7 +70,6 @@ export async function getValidRoles(
   token: string,
   systemRole?: string
 ): Promise<Omit<ISystemRoleModel & { _id: ObjectId }, never>[] | null> {
-  // TODO return all roles if just listing all users
   const scope = getTokenPayload(token).scope
   const allRoles = await SystemRole.find(criteria)
     .populate('roles')
