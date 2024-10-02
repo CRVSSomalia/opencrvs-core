@@ -23,7 +23,10 @@ import { AvatarSmall } from '@client/components/Avatar'
 import styled from 'styled-components'
 import { ToggleMenu } from '@opencrvs/components/lib/ToggleMenu'
 import { Button } from '@opencrvs/components/lib/Button'
-import { getUserRoleIntlKey } from '@client/views/SysAdmin//Team/utils'
+import {
+  canDeactivateUser,
+  getUserRoleIntlKey
+} from '@client/views/SysAdmin//Team/utils'
 import { EMPTY_STRING, LANG_EN } from '@client/utils/constants'
 import { Loader } from '@opencrvs/components/lib/Loader'
 import { getJurisdictionLocationIdFromUserDetails } from '@client/views/SysAdmin/Performance/utils'
@@ -164,7 +167,12 @@ export const UserAudit = () => {
   >(GET_USER, { variables: { userId }, fetchPolicy: 'cache-and-network' })
   const user = data?.getUser && transformUserQueryResult(data.getUser, intl)
   const userRole =
-    user && intl.formatMessage({ id: getUserRoleIntlKey(user.role._id) })
+    user && user.systemRole === 'SUPER_NATIONAL_SYSTEM_ADMIN'
+      ? intl.formatMessage(sysMessages.registrarGeneral)
+      : user &&
+        intl.formatMessage({
+          id: getUserRoleIntlKey(user.role._id)
+        })
 
   const toggleUserActivationModal = () => {
     setModalVisible(!modalVisible)
@@ -228,7 +236,12 @@ export const UserAudit = () => {
     }
   }
 
-  const getMenuItems = (userId: string, status: string) => {
+  const getMenuItems = (
+    userId: string,
+    status: string,
+    systemRole: string,
+    userDetails: UserDetails | null
+  ) => {
     const menuItems: { label: string; handler: () => void }[] = [
       {
         label: intl.formatMessage(sysMessages.editUserDetailsTitle),
@@ -253,7 +266,11 @@ export const UserAudit = () => {
       )
     }
 
-    if (status === 'active') {
+    if (
+      status === 'active' &&
+      userDetails &&
+      canDeactivateUser(userId, systemRole, userDetails)
+    ) {
       menuItems.push({
         label: intl.formatMessage(sysMessages.deactivate),
         handler: () => toggleUserActivationModal()
@@ -303,7 +320,9 @@ export const UserAudit = () => {
                   }
                   menuItems={getMenuItems(
                     user.id as string,
-                    user.status as string
+                    user.status as string,
+                    user.systemRole as string,
+                    userDetails
                   )}
                   hide={!canEditUserDetails(user, userDetails, scope)}
                 />
@@ -344,7 +363,9 @@ export const UserAudit = () => {
                     }
                     menuItems={getMenuItems(
                       user.id as string,
-                      user.status as string
+                      user.status as string,
+                      user.systemRole as string,
+                      userDetails
                     )}
                     hide={!canEditUserDetails(user, userDetails, scope)}
                   />

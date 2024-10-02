@@ -11,8 +11,8 @@
 import * as Hapi from '@hapi/hapi'
 import * as Joi from 'joi'
 
-import SystemRole from '@user-mgnt/model/systemRole'
 import { SortOrder } from 'mongoose'
+import { getValidRoles } from '@user-mgnt/utils/userUtils'
 
 interface IVerifyPayload {
   value?: string
@@ -34,6 +34,7 @@ export default async function getSystemRoles(
     sortOrder = 'asc'
   } = request.payload as IVerifyPayload
   let criteria = {}
+  const token = request.headers.authorization
 
   if (value) {
     criteria = { ...criteria, value }
@@ -44,12 +45,8 @@ export default async function getSystemRoles(
   if (active !== undefined) {
     criteria = { ...criteria, active }
   }
-
-  return await SystemRole.find(criteria)
-    .populate('roles')
-    .sort({
-      [sortBy]: sortOrder
-    })
+  const validRoles = await getValidRoles(criteria, sortOrder, sortBy, token)
+  return validRoles
 }
 
 export const searchRoleSchema = Joi.object({

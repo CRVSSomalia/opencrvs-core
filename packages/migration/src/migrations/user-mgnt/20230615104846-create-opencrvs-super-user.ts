@@ -102,8 +102,8 @@ export const up = async (db: Db, client: MongoClient) => {
       mobile: '0989898989',
       passwordHash,
       salt,
-      systemRole: 'NATIONAL_SYSTEM_ADMIN',
-      scope: ['natlsysadmin', 'sysadmin'],
+      systemRole: 'SUPER_NATIONAL_SYSTEM_ADMIN',
+      scope: ['supernatlsysadmin', 'natlsysadmin', 'sysadmin'],
       status: 'active'
     })
   } finally {

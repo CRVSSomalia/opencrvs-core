@@ -436,7 +436,7 @@ function UserListComponent(props: IProps) {
       if (
         userDetails &&
         user.status === 'active' &&
-        canDeactivateUser(user, userDetails)
+        canDeactivateUser(user.id, user.systemRole, userDetails)
       ) {
         menuItems.push({
           label: intl.formatMessage(messages.deactivate),
@@ -564,11 +564,13 @@ function UserListComponent(props: IProps) {
                 ((createNamesMap(user.name)[intl.locale] as string) ||
                   (createNamesMap(user.name)[LANG_EN] as string))) ||
               ''
-            const role = intl.formatMessage({
-              id: getUserRoleIntlKey(user.role._id)
-            })
+            const role =
+              user.systemRole === 'SUPER_NATIONAL_SYSTEM_ADMIN'
+                ? intl.formatMessage(messages.registrarGeneral)
+                : intl.formatMessage({
+                    id: getUserRoleIntlKey(user.role._id)
+                  })
             const avatar = user.avatar
-
             return {
               image: (
                 <AvatarSmall

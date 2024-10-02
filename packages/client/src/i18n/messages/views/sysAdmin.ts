@@ -32,6 +32,7 @@ interface ISysAdminMessages
   editUserCommonTitle: MessageDescriptor
   reactivate: MessageDescriptor
   reactivateUserTitle: MessageDescriptor
+  registrarGeneral: MessageDescriptor
   resetUserPasswordTitle: MessageDescriptor
   resetUserPasswordModalTitle: MessageDescriptor
   resetUserPasswordModalMessage: MessageDescriptor
@@ -190,6 +191,11 @@ const messagesToDefine: ISysAdminMessages = {
     defaultMessage: 'No longer being investigated for suspicious activity',
     description: 'The label for radio option no longer investigated',
     id: 'sysAdHome.user.audit.reactiv.noLongerInv'
+  },
+  registrarGeneral: {
+    id: 'userSetup.role.registrarGeneral',
+    defaultMessage: 'Registrar General',
+    description: 'The super admin role description'
   },
   resendInvite: {
     defaultMessage: 'Resend invite',

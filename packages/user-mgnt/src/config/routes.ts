@@ -111,6 +111,7 @@ const enum RouteScope {
   PERFORMANCE = 'performance',
   SYSADMIN = 'sysadmin',
   NATLSYSADMIN = 'natlsysadmin',
+  SUPERNATLSYSADMIN = 'supernatlsysadmin',
   VALIDATE = 'validate',
   RECORDSEARCH = 'recordsearch',
   VERIFY = 'verify'

@@ -22,6 +22,7 @@ export const userScopes = {
   systemAdmin: 'sysadmin',
   validate: 'validate',
   nationalSystemAdmin: 'natlsysadmin',
+  superNationalSystemAdmin: 'supernatlsysadmin',
   /** Bypasses the rate limiting in gateway. Useful for data seeder. */
   bypassRateLimit: 'bypassratelimit',
   teams: 'teams',
@@ -47,7 +48,8 @@ export const userRoleScopes = {
   ],
   SUPER_NATIONAL_SYSTEM_ADMIN: [
     userScopes.systemAdmin,
-    userScopes.nationalSystemAdmin
+    userScopes.nationalSystemAdmin,
+    userScopes.superNationalSystemAdmin
   ],
   PERFORMANCE_MANAGEMENT: [userScopes.performance],
   NATIONAL_REGISTRAR: [

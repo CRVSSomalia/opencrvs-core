@@ -108,7 +108,8 @@ export const enum AuthScope {
   PERFORMANCE = 'performance',
   SYSADMIN = 'sysadmin',
   VALIDATE = 'validate',
-  NATLSYSADMIN = 'natlsysadmin'
+  NATLSYSADMIN = 'natlsysadmin',
+  SUPERNATLSYSADMIN = 'supernatlsysadmin'
 }
 
 export const hasNatlSysAdminScope = (scope: Scope | null): boolean => {

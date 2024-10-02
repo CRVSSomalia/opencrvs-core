@@ -35,6 +35,7 @@ export const enum RouteScope {
   SYSADMIN = 'sysadmin',
   CERTIFY = 'certify',
   NATLSYSADMIN = 'natlsysadmin',
+  SUPERNATLSYSADMIN = 'supernatlsysadmin',
   PERFORMANCE = 'performance',
   RECORD_SEARCH = 'recordsearch'
 }

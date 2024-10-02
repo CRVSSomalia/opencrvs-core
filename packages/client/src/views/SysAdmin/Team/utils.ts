@@ -119,15 +119,16 @@ export function getUserSystemRole(
 }
 
 export function canDeactivateUser(
-  user: User,
+  id: string,
+  systemRole: string,
   userDetails: UserDetails
 ): boolean {
   if (
-    user.systemRole === 'SUPER_NATIONAL_SYSTEM_ADMIN' &&
+    systemRole === 'SUPER_NATIONAL_SYSTEM_ADMIN' &&
     userDetails.systemRole === 'NATIONAL_SYSTEM_ADMIN'
   ) {
     return false
-  } else if (user.id !== userDetails.id) {
+  } else if (id !== userDetails.id) {
     return true
   } else {
     return false
