@@ -1045,7 +1045,6 @@ type Mutation {
     details: MarriageRegistrationInput!
   ): ID!
   createBirthRegistration(details: BirthRegistrationInput!): CreatedIds!
-  updateBirthRegistration(id: ID!, details: BirthRegistrationInput!): ID!
   markBirthAsVerified(
     id: ID!
     details: BirthRegistrationInput
@@ -1128,12 +1127,6 @@ type Mutation {
   usernameReminder(userId: String!): String
   resetPasswordInvite(userId: String!): String
   updateRole(systemRole: SystemRoleInput): Response!
-  createOrUpdateCertificateSVG(
-    certificateSVG: CertificateSVGInput!
-  ): CertificateSVG
-  updateApplicationConfig(
-    applicationConfig: ApplicationConfigurationInput
-  ): ApplicationConfiguration
   reactivateSystem(clientId: ID!): System
   deactivateSystem(clientId: ID!): System
   registerSystem(system: SystemInput): SystemSecret
@@ -1146,9 +1139,6 @@ type Mutation {
   removeBookmarkedAdvancedSearch(
     removeBookmarkedSearchInput: RemoveBookmarkedSeachInput!
   ): BookMarkedSearches
-  toggleInformantSMSNotification(
-    smsNotifications: [SMSNotificationInput!]
-  ): [SMSNotification!]
 }
 
 type Notification {
@@ -1348,9 +1338,6 @@ type Query {
   ): RegistrationCountResult
   fetchMarriageRegistration(id: ID!): MarriageRegistration
   fetchRecordDetailsForVerification(id: String!): RecordDetails
-  locationsByParent(parentId: String, type: String): [Location]
-  locationById(locationId: String): Location
-  hasChildLocation(parentId: String): Location
   getUser(userId: String): User
   getUserByMobile(mobile: String): User
   getUserByEmail(email: String): User
@@ -1361,7 +1348,6 @@ type Query {
     status: String
     systemRole: String
     primaryOfficeId: String
-    locationId: String
     count: Int
     skip: Int
     sort: String
@@ -1524,11 +1510,6 @@ type Registration {
   brideSignature: String
   witnessOneSignature: String
   witnessTwoSignature: String
-  informantsSignatureURI: String
-  groomSignatureURI: String
-  brideSignatureURI: String
-  witnessOneSignatureURI: String
-  witnessTwoSignatureURI: String
   contactPhoneNumber: String
   contactEmail: String
   status: [RegWorkflow]
@@ -1921,7 +1902,6 @@ type User {
   status: Status!
   underInvestigation: Boolean
   primaryOffice: Location
-  catchmentArea: [Location!]
   localRegistrar: LocalRegistrar
   identifier: Identifier
   signature: Signature
@@ -1982,7 +1962,6 @@ input UserInput {
   role: String
   email: String
   primaryOffice: String
-  catchmentArea: [String]
   device: String
   signature: SignatureInput
 }

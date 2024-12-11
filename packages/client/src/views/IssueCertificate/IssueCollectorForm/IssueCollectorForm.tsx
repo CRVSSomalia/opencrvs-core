@@ -9,7 +9,7 @@
  * Copyright (C) The OpenCRVS Authors located at https://github.com/opencrvs/opencrvs-core/blob/master/AUTHORS.
  */
 import React from 'react'
-import { Content } from '@opencrvs/components/lib'
+import { Content, ContentSize } from '@opencrvs/components/lib'
 import { buttonMessages } from '@client/i18n/messages'
 import { useIntl } from 'react-intl'
 import { FormFieldGenerator } from '@client/components/form'
@@ -18,8 +18,8 @@ import {
   IPrintableDeclaration,
   ICertificate
 } from '@client/declarations'
-import { useDispatch } from 'react-redux'
-import { PrimaryButton } from '@client/../../components/lib/buttons'
+import { useDispatch, useSelector } from 'react-redux'
+import { Button } from '@client/../../components/lib/Button'
 import { groupHasError } from '@client/views/CorrectionForm/utils'
 import {
   formatUrl,
@@ -32,6 +32,8 @@ import { getIssueCertCollectorGroupForEvent } from '@client/forms/certificate/fi
 import { Redirect } from 'react-router'
 import { REGISTRAR_HOME_TAB } from '@client/navigation/routes'
 import { WORKQUEUE_TABS } from '@client/components/interface/Navigation'
+import { getOfflineData } from '@client/offline/selectors'
+import { getUserDetails } from '@client/profile/profileSelectors'
 
 export function IssueCollectorForm({
   declaration
@@ -40,6 +42,8 @@ export function IssueCollectorForm({
 }) {
   const intl = useIntl()
   const dispatch = useDispatch()
+  const config = useSelector(getOfflineData)
+  const user = useSelector(getUserDetails)
 
   const handleChange = (
     sectionData: ICertificate['collector'],
@@ -95,18 +99,25 @@ export function IssueCollectorForm({
   return (
     <Content
       title={intl.formatMessage(issueMessages.issueCertificate)}
+      size={ContentSize.SMALL}
       bottomActionButtons={[
-        <PrimaryButton
+        <Button
           key="continue-button"
           id="continue-button"
+          type="primary"
+          size="large"
+          fullWidth
           onClick={continueButtonHandler}
           disabled={groupHasError(
             { id: 'collector', fields },
-            declaration.data.registration.certificates?.[0]?.collector ?? {}
+            declaration.data.registration.certificates?.[0]?.collector ?? {},
+            config,
+            declaration.data,
+            user
           )}
         >
           {intl.formatMessage(buttonMessages.continueButton)}
-        </PrimaryButton>
+        </Button>
       ]}
       showTitleOnMobile
     >
@@ -125,7 +136,9 @@ export function IssueCollectorForm({
               declaration.data.registration.certificates.length - 1
             ].collector) ||
             {},
-          declaration && declaration.data
+          declaration && declaration.data,
+          config,
+          user
         )}
         draftData={declaration.data}
       />

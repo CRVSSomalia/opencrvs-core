@@ -10,10 +10,16 @@
  */
 import * as React from 'react'
 import { createDeclaration } from '@client/declarations'
-import { Event as DeclarationEvent } from '@client/utils/gateway'
+import { Event as DeclarationEvent, Event } from '@client/utils/gateway'
 import { REVIEW_EVENT_PARENT_FORM_PAGE } from '@client/navigation/routes'
 import { createStore } from '@client/store'
-import { createTestComponent, selectOption } from '@client/tests/util'
+import {
+  createTestComponent,
+  createTestStore,
+  getRegisterFormFromStore,
+  selectOption,
+  userDetails
+} from '@client/tests/util'
 import { ReviewSection } from '@client/views/RegisterForm/review/ReviewSection'
 import { ReactWrapper } from 'enzyme'
 import { waitForElement } from '@client/tests/wait-for-element'
@@ -51,8 +57,11 @@ draft.duplicates = [
 
 describe('when in device of large viewport', () => {
   let userAgentMock: SpyInstance
+  let form: Awaited<ReturnType<typeof getRegisterFormFromStore>>
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    const { store } = await createTestStore()
+    form = await getRegisterFormFromStore(store, Event.Birth)
     userAgentMock = vi.spyOn(window.navigator, 'userAgent', 'get')
     Object.assign(window, { outerWidth: 1034 })
 
@@ -66,10 +75,12 @@ describe('when in device of large viewport', () => {
       const testComponent = await createTestComponent(
         <ReviewSection
           pageRoute={REVIEW_EVENT_PARENT_FORM_PAGE}
+          form={form}
           draft={draft}
           rejectDeclarationClickEvent={mockHandler}
           submitClickEvent={mockHandler}
           onChangeReviewForm={mockHandler}
+          userDetails={userDetails}
         />,
         { store, history }
       )
@@ -107,7 +118,7 @@ describe('when in device of large viewport', () => {
             .props().disabled
         ).toBeTruthy()
       })
-      it('enable the duplicate button on modal when select duplicate Id and describe-reason has value', async () => {
+      it('enable the duplicate button on modal when select duplicate Id and describe-reason has valu', async () => {
         duplicateFormComponent
           .find('#mark-as-duplicate')
           .hostNodes()

@@ -18,7 +18,7 @@ import { IStoreState } from '@client/store'
 import { SysAdminContentWrapper } from '@client/views/SysAdmin/SysAdminContentWrapper'
 import { messages } from '@client/i18n/messages/views/config'
 
-import { Content, FormTabs } from '@opencrvs/components'
+import { Content, ContentSize, FormTabs } from '@opencrvs/components'
 import { FormFieldGenerator } from '@client/components/form/FormFieldGenerator'
 import { Button } from '@opencrvs/components/lib/Button'
 import { Icon } from '@opencrvs/components/lib/Icon'
@@ -30,7 +30,7 @@ import { getAdvancedSearchParamsState as AdvancedSearchParamsSelector } from '@c
 import { setAdvancedSearchParam } from '@client/search/advancedSearch/actions'
 import { goToAdvancedSearchResult } from '@client/navigation'
 import { pick } from 'lodash'
-import { IDateRangePickerValue } from '@client/forms'
+import { IDateRangePickerValue, IFormSectionData } from '@client/forms'
 import { getOfflineData } from '@client/offline/selectors'
 import { Accordion } from '@client/../../components/lib/Accordion'
 import {
@@ -153,6 +153,7 @@ const BirthSection = () => {
             'dateOfRegistration',
             'registrationStatuses'
           ])}
+          draftData={{ advancedSearchForm: formState as IFormSectionData }}
         />
       </Accordion>
 
@@ -176,6 +177,7 @@ const BirthSection = () => {
             'childLastName',
             'childGender'
           ])}
+          draftData={{ advancedSearchForm: formState as IFormSectionData }}
         />
       </Accordion>
 
@@ -212,6 +214,7 @@ const BirthSection = () => {
             'eventLocationLevel1',
             'eventLocationLevel2'
           ])}
+          draftData={{ advancedSearchForm: formState as IFormSectionData }}
         />
       </Accordion>
 
@@ -234,6 +237,7 @@ const BirthSection = () => {
             'motherFirstNames',
             'motherFamilyName'
           ])}
+          draftData={{ advancedSearchForm: formState as IFormSectionData }}
         />
       </Accordion>
 
@@ -256,6 +260,7 @@ const BirthSection = () => {
             'fatherFirstNames',
             'fatherFamilyName'
           ])}
+          draftData={{ advancedSearchForm: formState as IFormSectionData }}
         />
       </Accordion>
 
@@ -278,6 +283,7 @@ const BirthSection = () => {
             'informantFirstNames',
             'informantFamilyName'
           ])}
+          draftData={{ advancedSearchForm: formState as IFormSectionData }}
         />
       </Accordion>
 
@@ -285,6 +291,7 @@ const BirthSection = () => {
         id="search"
         key="search"
         type="primary"
+        fullWidth
         size="large"
         disabled={isDisabled}
         onClick={() => {
@@ -355,6 +362,7 @@ const DeathSection = () => {
             'dateOfRegistration',
             'registrationStatuses'
           ])}
+          draftData={{ advancedSearchForm: formState as IFormSectionData }}
         />
       </Accordion>
 
@@ -378,6 +386,7 @@ const DeathSection = () => {
             'deceasedFamilyName',
             'deceasedGender'
           ])}
+          draftData={{ advancedSearchForm: formState as IFormSectionData }}
         />
       </Accordion>
 
@@ -414,6 +423,7 @@ const DeathSection = () => {
             'eventLocationLevel1',
             'eventLocationLevel2'
           ])}
+          draftData={{ advancedSearchForm: formState as IFormSectionData }}
         />
       </Accordion>
 
@@ -436,6 +446,7 @@ const DeathSection = () => {
             'informantFirstNames',
             'informantFamilyName'
           ])}
+          draftData={{ advancedSearchForm: formState as IFormSectionData }}
         />
       </Accordion>
 
@@ -444,6 +455,7 @@ const DeathSection = () => {
         key="search"
         type="primary"
         size="large"
+        fullWidth
         disabled={isDisable}
         onClick={() => {
           dispatch(
@@ -491,6 +503,7 @@ const AdvancedSearch = () => {
         <Content
           title={intl.formatMessage(messages.advancedSearch)}
           titleColor={'copy'}
+          size={ContentSize.SMALL}
           tabBarContent={
             <FormTabs
               sections={tabSections}

@@ -19,7 +19,7 @@ import { sendBundleToHearth } from '@workflow/records/fhir'
 import { auditEvent } from '@workflow/records/audit'
 import { getTokenPayload } from '@opencrvs/commons/authentication'
 import { getUserOrSystemByCriteria } from '@workflow/records/user'
-import { findAssignment } from '@opencrvs/commons'
+import { findAssignment } from '@opencrvs/commons/assignment'
 
 export async function unassignRecordHandler(
   request: Hapi.Request,
@@ -36,7 +36,7 @@ export async function unassignRecordHandler(
   const tokenPayload = getTokenPayload(token)
   const record = await getRecordById(
     // Task history is fetched rather than the task only
-    `${payload.id}?includeHistoryResources`,
+    payload.id,
     token,
     [
       'CERTIFIED',
@@ -46,7 +46,8 @@ export async function unassignRecordHandler(
       'REGISTERED',
       'ISSUED',
       'CORRECTION_REQUESTED'
-    ]
+    ],
+    true
   )
 
   const assignment = findAssignment(record)
@@ -69,11 +70,7 @@ export async function unassignRecordHandler(
   )
 
   await sendBundleToHearth(unassignedRecordWithTaskOnly)
-  await indexBundleToRoute(
-    unassignedRecordWithTaskOnly,
-    token,
-    '/events/unassigned'
-  )
+  await indexBundleToRoute(unassignedRecord, token, '/events/unassigned')
   await auditEvent('unassigned', unassignedRecord, token)
 
   return unassignedRecord

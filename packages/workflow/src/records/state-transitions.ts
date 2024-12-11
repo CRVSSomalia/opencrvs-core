@@ -51,14 +51,14 @@ import {
   TaskHistory,
   RejectedRecord
 } from '@opencrvs/commons/types'
-import { getUUID } from '@opencrvs/commons'
+import { getUUID, UUID } from '@opencrvs/commons'
 import {
   REG_NUMBER_SYSTEM,
   SECTION_CODE
 } from '@workflow/features/events/utils'
 import {
   invokeRegistrationValidation,
-  setupLastRegLocation,
+  setupLastRegOffice,
   setupLastRegUser,
   updatePatientIdentifierWithRN,
   validateDeceasedDetails
@@ -111,6 +111,7 @@ import { REG_NUMBER_GENERATION_FAILED } from '@workflow/features/registration/fh
 export async function toCorrected(
   record: RegisteredRecord | CertifiedRecord | IssuedRecord,
   practitioner: Practitioner,
+  practitionerOfficeId: UUID,
   correctionDetails: MakeCorrectionRequestInput,
   proofOfLegalCorrectionAttachments: Attachment[],
   paymentAttachmentURL?: string
@@ -152,9 +153,9 @@ export async function toCorrected(
     practitioner
   )
 
-  const correctionRequestWithLocationExtensions = await setupLastRegLocation(
+  const correctionRequestWithLocationExtensions = setupLastRegOffice(
     correctionRequestTaskWithPractitionerExtensions,
-    practitioner
+    practitionerOfficeId
   )
 
   const newEntries = [
@@ -254,25 +255,35 @@ export async function toUpdated(
       token
     )
 
-  const recordWithUpdatedTask = {
+  /*
+   * Figuring out which resources changes during
+   * update event is difficult so we are forwarding
+   * all the resources but we can be sure that history
+   * resources need not be included
+   */
+  const changedResources = {
     ...record,
     entry: [
-      ...record.entry.map((entry) => {
-        if (entry.resource.id !== previousTask.id) {
-          return entry
-        }
-        return {
-          ...entry,
-          resource: updatedTask
-        }
-      })
+      ...record.entry
+        .filter(
+          ({ resource: { resourceType } }) => !resourceType.endsWith('History')
+        )
+        .map((entry) => {
+          if (entry.resource.id !== previousTask.id) {
+            return entry
+          }
+          return {
+            ...entry,
+            resource: updatedTask
+          }
+        })
     ]
   }
 
   return changeState(
     await mergeChangedResourcesIntoRecord(
       record,
-      recordWithUpdatedTask,
+      changedResources,
       practitionerResourcesBundle
     ),
     'READY_FOR_REVIEW'
@@ -323,15 +334,14 @@ export async function toDownloaded(
   downloadedRecordWithTaskOnly: Bundle<SavedTask>
 }> {
   const previousTask = getTaskFromSavedBundle(record)
-
-  const downloadedTask = await createDownloadTask(
+  const taskWithoutPractitionerDetails = createDownloadTask(
     previousTask,
-    token,
     extensionUrl
   )
+  const [downloadedTask, practitionerDetailsBundle] =
+    await withPractitionerDetails(taskWithoutPractitionerDetails, token)
 
-  // this is to show the latest action in history
-  // as all histories are read from task history
+  // TaskHistory is added to the bundle to show audit history via gateway type resolvers in frontend
   const taskHistoryEntry = resourceToBundleEntry(
     toHistoryResource(previousTask)
   ) as SavedBundleEntry<TaskHistory>
@@ -346,14 +356,15 @@ export async function toDownloaded(
     resource: downloadedTask
   }
 
-  const updatedEntries = [...filteredEntriesWithoutTask, newTaskEntry].concat(
-    taskHistoryEntry
-  )
-
-  const downloadedRecord = {
+  const updatedBundle = {
     ...record,
-    entry: updatedEntries
-  } as ValidRecord
+    entry: [...filteredEntriesWithoutTask, newTaskEntry, taskHistoryEntry]
+  }
+
+  const downloadedRecord = mergeBundles(
+    updatedBundle,
+    practitionerDetailsBundle
+  ) as ValidRecord
 
   const downloadedRecordWithTaskOnly: Bundle<SavedTask> = {
     resourceType: 'Bundle',
@@ -710,6 +721,7 @@ export async function toValidated(
 export async function toCorrectionRequested(
   record: RegisteredRecord | CertifiedRecord | IssuedRecord,
   practitioner: Practitioner,
+  practitionerOfficeId: UUID,
   correctionDetails: CorrectionRequestInput,
   proofOfLegalCorrectionAttachments: Array<{ type: string; url: string }>,
   paymentAttachmentURL?: string
@@ -752,9 +764,9 @@ export async function toCorrectionRequested(
     practitioner
   )
 
-  const correctionRequestWithLocationExtensions = await setupLastRegLocation(
+  const correctionRequestWithLocationExtensions = setupLastRegOffice(
     correctionRequestTaskWithPractitionerExtensions,
-    practitioner
+    practitionerOfficeId
   )
 
   return changeState(
@@ -836,6 +848,7 @@ export function toVerified(
 export async function toCorrectionRejected(
   record: CorrectionRequestedRecord,
   practitioner: Practitioner,
+  practitionerOfficeId: UUID,
   rejectionDetails: CorrectionRejectionInput
 ): Promise<
   RecordWithPreviousTask<RegisteredRecord | CertifiedRecord | IssuedRecord>
@@ -862,9 +875,9 @@ export async function toCorrectionRejected(
     practitioner
   )
 
-  const correctionRejectionWithLocationExtensions = await setupLastRegLocation(
+  const correctionRejectionWithLocationExtensions = setupLastRegOffice(
     correctionRejectionTaskWithPractitionerExtensions,
-    practitioner
+    practitionerOfficeId
   )
 
   const taskHistory = await getTaskHistory(currentCorrectionRequestedTask.id)
@@ -893,9 +906,9 @@ export async function toCorrectionRejected(
     practitioner
   )
 
-  const previousTaskWithLocationExtensions = await setupLastRegLocation(
+  const previousTaskWithLocationExtensions = setupLastRegOffice(
     previousTaskWithPractitionerExtensions,
-    practitioner
+    practitionerOfficeId
   )
 
   // This is important as otherwise the when the older task is removed later on this one gets dropped out

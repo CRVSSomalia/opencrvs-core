@@ -18,7 +18,7 @@ import {
   CorrectorRelationship,
   getCorrectorSection
 } from '@client/forms/correction/corrector'
-import { connect } from 'react-redux'
+import { connect, useSelector } from 'react-redux'
 import { WrappedComponentProps as IntlShapeProps, injectIntl } from 'react-intl'
 import {
   goBack,
@@ -26,23 +26,20 @@ import {
   goToPageGroup,
   goToHomeTab
 } from '@client/navigation'
-import {
-  IFormSection,
-  IFormSectionData,
-  IRadioGroupWithNestedFieldsFormField,
-  ReviewSection
-} from '@client/forms'
+import { IFormSection, IFormSectionData, ReviewSection } from '@client/forms'
 import { Event } from '@client/utils/gateway'
 import { ActionPageLight } from '@opencrvs/components/lib/ActionPageLight'
 import { FormFieldGenerator } from '@client/components/form'
-import { PrimaryButton } from '@opencrvs/components/lib/buttons'
+import { Button } from '@opencrvs/components/lib/Button'
 import { buttonMessages } from '@client/i18n/messages'
 import { messages } from '@client/i18n/messages/views/correction'
-import { Content } from '@opencrvs/components/lib/Content'
+import { Content, ContentSize } from '@opencrvs/components/lib/Content'
 import { groupHasError } from './utils'
 import { CERTIFICATE_CORRECTION_REVIEW } from '@client/navigation/routes'
 import { WORKQUEUE_TABS } from '@client/components/interface/Navigation'
 import { replaceInitialValues } from '@client/views/RegisterForm/RegisterForm'
+import { getOfflineData } from '@client/offline/selectors'
+import { getUserDetails } from '@client/profile/profileSelectors'
 
 type IProps = {
   declaration: IDeclaration
@@ -61,7 +58,8 @@ type IFullProps = IProps & IDispatchProps & IntlShapeProps
 
 function CorrectorFormComponent(props: IFullProps) {
   const { declaration, intl } = props
-
+  const config = useSelector(getOfflineData)
+  const user = useSelector(getUserDetails)
   const section = getCorrectorSection(declaration)
 
   const group = React.useMemo(
@@ -70,7 +68,9 @@ function CorrectorFormComponent(props: IFullProps) {
       fields: replaceInitialValues(
         section.groups[0].fields,
         declaration.data[section.id] || {},
-        declaration.data
+        declaration.data,
+        config,
+        user
       )
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -127,14 +127,23 @@ function CorrectorFormComponent(props: IFullProps) {
   }
 
   const continueButton = (
-    <PrimaryButton
+    <Button
       id="confirm_form"
       key="confirm_form"
+      type="primary"
+      size="large"
+      fullWidth
       onClick={continueButtonHandler}
-      disabled={groupHasError(group, declaration.data[section.id])}
+      disabled={groupHasError(
+        group,
+        declaration.data[section.id],
+        config,
+        declaration.data,
+        user
+      )}
     >
       {intl.formatMessage(buttonMessages.continueButton)}
-    </PrimaryButton>
+    </Button>
   )
 
   return (
@@ -147,6 +156,7 @@ function CorrectorFormComponent(props: IFullProps) {
         goHome={() => props.goToHomeTab(WORKQUEUE_TABS.readyForReview)}
       >
         <Content
+          size={ContentSize.SMALL}
           title={group.title && intl.formatMessage(group.title)}
           subtitle={
             declaration.event === Event.Birth

@@ -8,7 +8,7 @@
  *
  * Copyright (C) The OpenCRVS Authors located at https://github.com/opencrvs/opencrvs-core/blob/master/AUTHORS.
  */
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Header } from '@client/components/Header/Header'
 import { Navigation } from '@client/components/interface/Navigation'
 import styled, { withTheme } from 'styled-components'
@@ -80,6 +80,7 @@ import {
 } from '@client/search/advancedSearch/utils'
 import { omitBy } from 'lodash'
 import { BookmarkAdvancedSearchResult } from '@client/views/AdvancedSearch/BookmarkAdvancedSearchResult'
+import { useWindowSize } from '@opencrvs/components/lib/hooks'
 import { UserDetails } from '@client/utils/userUtils'
 
 const SearchParamContainer = styled.div`
@@ -120,7 +121,7 @@ type IFullProps = ISearchInputProps &
   RouteComponentProps<IMatchParams>
 
 const AdvancedSearchResultComp = (props: IFullProps) => {
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth)
+  const { width: windowWidth } = useWindowSize()
   const intl = useIntl()
   const advancedSearchParamsState = useSelector(AdvancedSearchParamsState)
   const { searchId, ...advancedSearchParams } = useSelector(
@@ -141,14 +142,6 @@ const AdvancedSearchResultComp = (props: IFullProps) => {
     count: DEFAULT_PAGE_SIZE,
     skip: DEFAULT_PAGE_SIZE * (currentPageNumber - 1)
   }
-
-  useEffect(() => {
-    const recordWindowWidth = () => {
-      setWindowWidth(window.innerWidth)
-    }
-    window.addEventListener('resize', recordWindowWidth)
-    return () => window.removeEventListener('resize', recordWindowWidth)
-  }, [])
 
   const isEnoughParams = () => {
     return isAdvancedSearchFormValid(

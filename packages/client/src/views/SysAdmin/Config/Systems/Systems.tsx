@@ -528,7 +528,6 @@ export function SystemList() {
                   value={newClientName}
                   onChange={onChangeClientName}
                   error={false}
-                  inputFieldWidth="100%"
                 />
               </InputField>
             </Field>
@@ -540,7 +539,6 @@ export function SystemList() {
                 label={intl.formatMessage(integrationMessages.type)}
               >
                 <Select
-                  ignoreMediaQuery
                   onChange={(val) => {
                     setNewSystemType(val as SystemType)
                   }}
@@ -582,7 +580,6 @@ export function SystemList() {
                   )}
                 >
                   <Select
-                    ignoreMediaQuery
                     onChange={(val) => {
                       setNewIntegratingSystemType(val as IntegratingSystemType)
                     }}

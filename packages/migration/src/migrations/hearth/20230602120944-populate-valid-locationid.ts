@@ -17,8 +17,8 @@ import { Db, MongoClient } from 'mongodb'
 import {
   updateComposition,
   searchCompositionByCriteria
-  // eslint-disable-next-line import/no-relative-parent-imports
 } from '../../utils/elasticsearch-helper.js'
+import { getSearchTotalCount } from '@opencrvs/commons'
 
 // THIS MIGRATION POPULATES THE MISSING EVENTLOCATIONIDS OR EVENTJURISDICTIONS IDS DUE TO THE ISSUE - #5242
 
@@ -56,8 +56,9 @@ export const up = async (db: Db, client: MongoClient) => {
 
   const compositionsWithoutLocationIdsResult =
     await searchCompositionByCriteria(searchCriteria)
-  const totalCompositionsWithoutLocationIds =
-    compositionsWithoutLocationIdsResult?.body.hits.total.value || 0
+  const totalCompositionsWithoutLocationIds = getSearchTotalCount(
+    compositionsWithoutLocationIdsResult?.body?.hits.total
+  )
 
   while (processedDocCount < totalCompositionsWithoutLocationIds) {
     const elasticDocBatchResult = await searchCompositionByCriteria(
@@ -79,7 +80,7 @@ export const up = async (db: Db, client: MongoClient) => {
       } catch (error: any) {
         // eslint-disable-next-line no-console
         console.error(
-          `Migration - ElasticSearch :: Process for populating missing eventLocationId/eventJurisdictionIds for ${elasticDoc.id} failed : ${error.stack}`
+          `Migration - ElasticSearch :: Process for populating missing eventLocationId/eventJurisdictionIds for ${elasticDoc._id} failed: ${error.stack}`
         )
       }
     }
@@ -90,7 +91,7 @@ export const up = async (db: Db, client: MongoClient) => {
   await session.endSession()
   // eslint-disable-next-line no-console
   console.log(
-    `Migration - ElasticSearch :: Process for populating missing eventLocationId/eventJurisdictionIds  completed successfully.`
+    `Migration - ElasticSearch :: Process for populating missing eventLocationId/eventJurisdictionIds completed successfully.`
   )
 }
 
@@ -137,22 +138,24 @@ async function updateEventLocationIdOrJurisdictionIds(db: Db, elasticDoc: any) {
   )
 
   if (encounterDoc.length > 0) {
-    const locationId = encounterDoc[0].location[0].location.reference.replace(
-      'Location/',
-      ''
-    )
+    const locationId =
+      encounterDoc[0]?.location?.[0]?.location?.reference?.replace(
+        'Location/',
+        ''
+      )
 
-    const locationDoc = await getCollectionDocuments(
-      db,
-      COLLECTION_NAMES.LOCATION,
-      [locationId]
-    )
+    const locationDoc = locationId
+      ? await getCollectionDocuments(db, COLLECTION_NAMES.LOCATION, [
+          locationId
+        ])
+      : []
 
     if (locationDoc.length > 0) {
-      if (locationDoc[0].type.coding[0].code === 'HEALTH_FACILITY') {
-        body.eventLocationId = locationDoc[0].id
+      const firstLocationDoc = locationDoc[0]
+      if (firstLocationDoc.type?.coding?.[0]?.code === 'HEALTH_FACILITY') {
+        body.eventLocationId = firstLocationDoc.id
       } else {
-        const address = locationDoc[0].address
+        const address = firstLocationDoc.address
         if (address) {
           const eventJurisdictionIds: string[] = []
           address.state && eventJurisdictionIds.push(address.state)

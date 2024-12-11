@@ -48,6 +48,7 @@ import {
   SORT_ORDER,
   Workqueue
 } from '@opencrvs/components/lib/Workqueue'
+import { useWindowSize } from '@opencrvs/components/lib/hooks'
 import {
   ConnectionError,
   StatusSubmissionWaiting as StatusWaiting
@@ -145,23 +146,15 @@ const isOutboxDeclaration = (
 
 export function Outbox() {
   const intl = useIntl()
-  const [width, setWidth] = React.useState(window.innerWidth)
   const [sortedColumn, setSortedColumn] = React.useState(COLUMNS.ICON_WITH_NAME)
   const [sortOrder, setSortOrder] = React.useState(SORT_ORDER.ASCENDING)
+  const { width } = useWindowSize()
   const isOnline = useOnlineStatus()
   const theme = getTheme()
   const declarations = useSelector((state: IStoreState) =>
     state.declarationsState?.declarations.filter(isOutboxDeclaration)
   )
   const dispatch = useDispatch()
-
-  React.useEffect(() => {
-    function recordWindowWidth() {
-      setWidth(window.innerWidth)
-    }
-    window.addEventListener('resize', recordWindowWidth)
-    return () => window.removeEventListener('resize', recordWindowWidth)
-  }, [])
 
   const onColumnClick = (columnName: string) => {
     const { newSortedCol, newSortOrder } = changeSortedColumn(

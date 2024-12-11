@@ -196,6 +196,7 @@ describe('create new user tests', () => {
     store = s.store
     history = s.history
     store.dispatch(offlineDataReady(mockOfflineDataDispatch))
+    await flushPromises()
   })
 
   describe('when user is in create new user form', () => {
@@ -260,6 +261,7 @@ describe('create new user tests', () => {
   describe('when user in review page', () => {
     beforeEach(async () => {
       store.dispatch(offlineDataReady(mockOfflineDataDispatch))
+      await flushPromises()
       store.dispatch(modifyUserFormData(mockCompleteFormData))
       testComponent = await createTestComponent(
         // @ts-ignore
@@ -353,13 +355,6 @@ describe('edit user tests', () => {
               alias: ['নরসিংদী পৌরসভা'],
               __typename: 'Location'
             },
-            catchmentArea: [
-              {
-                id: '6e1f3bce-7bcb-4bf6-8e35-0d9facdf158b',
-                name: 'Sample location',
-                alias: 'স্যাম্পল লোকেশান'
-              }
-            ],
             // without signature confirm button stays disabled
             signature: new File(['(⌐□_□)'], 'chucknorris.png', {
               type: 'image/png'
@@ -372,10 +367,11 @@ describe('edit user tests', () => {
     }
   ]
 
-  beforeEach(() => {
+  beforeEach(async () => {
     ;(roleQueries.fetchRoles as Mock).mockReturnValue(mockRoles)
     ;(userQueries.searchUsers as Mock).mockReturnValue(mockUsers)
     store.dispatch(offlineDataReady(mockOfflineDataDispatch))
+    await flushPromises()
   })
 
   it('check user role update', async () => {

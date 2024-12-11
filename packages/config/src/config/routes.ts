@@ -10,7 +10,6 @@
  */
 import {
   createCertificateHandler,
-  deleteCertificateHandler,
   getActiveCertificatesHandler,
   getCertificateHandler,
   requestActiveCertificate,
@@ -19,22 +18,24 @@ import {
   updateCertificateHandler
 } from '@config/handlers/certificate/certificateHandler'
 import configHandler, {
-  getLoginConfigHandler,
-  updateApplicationConfig,
-  updateApplicationConfigHandler
+  getLoginConfigHandler
 } from '@config/handlers/application/applicationConfigHandler'
-import createInformantSMSNotificationHandler, {
-  requestSchema as createInformantSMSNotificationReqSchema
-} from '@config/handlers/informantSMSNotifications/createInformantSMSNotification/handler'
-import getInformantSMSNotificationsHandler from '@config/handlers/informantSMSNotifications/getInformantSMSNotification/handler'
-import updateInformantSMSNotificationHandler, {
-  requestSchema as updateInformantSMSNotificationReqSchema
-} from '@config/handlers/informantSMSNotifications/updateInformantSMSNotification/handler'
 import getSystems from '@config/handlers/system/systemHandler'
 import getForms from '@config/handlers/forms/formsHandler'
 import getDashboardQueries from '@config/handlers/dashboardQueries/dashboardQueries'
 import { ServerRoute } from '@hapi/hapi'
 import * as Joi from 'joi'
+import { resolveChildren } from '@config/handlers/locations/children'
+import {
+  fetchLocationsHandler,
+  locationQuerySchema,
+  requestParamsSchema,
+  createLocationHandler,
+  updateLocationHandler,
+  updateSchema,
+  requestSchema as createLocationReqSchema
+} from '@config/handlers/locations/handler'
+import { fetchLocationHandler } from '@config/handlers/locations/location'
 import { locationHierarchyHandler } from '@config/handlers/locations/hierarchy'
 
 export const enum RouteScope {
@@ -184,83 +185,75 @@ export default function getRoutes(): ServerRoute[] {
       }
     },
     {
-      method: 'DELETE',
-      path: '/certificate/{certificateId}',
-      handler: deleteCertificateHandler,
+      method: 'GET',
+      path: '/dashboardQueries',
+      handler: getDashboardQueries,
       options: {
         tags: ['api'],
-        description: 'Delete certificate',
-        auth: {
-          scope: [RouteScope.NATLSYSADMIN]
+        auth: false,
+        description: 'Fetch dashboard queries from country config'
+      }
+    },
+    {
+      method: 'GET',
+      path: '/locations',
+      handler: fetchLocationsHandler,
+      options: {
+        tags: ['api'],
+        auth: false,
+        description: 'Get all locations',
+        validate: {
+          query: locationQuerySchema
         }
       }
     },
     {
       method: 'POST',
-      path: '/updateApplicationConfig',
-      handler: updateApplicationConfigHandler,
+      path: '/locations',
+      handler: createLocationHandler,
       options: {
         tags: ['api'],
-        description: 'Updates an existing Config',
         auth: {
-          scope: [RouteScope.NATLSYSADMIN]
+          scope: ['natlsysadmin']
         },
+        description: 'Create a location',
         validate: {
-          payload: updateApplicationConfig
-        }
-      }
-    },
-    {
-      method: 'POST',
-      path: '/informantSMSNotification',
-      handler: createInformantSMSNotificationHandler,
-      options: {
-        tags: ['api'],
-        description: 'Creates informantSMSNotifications',
-        auth: {
-          scope: [RouteScope.NATLSYSADMIN]
-        },
-        validate: {
-          payload: createInformantSMSNotificationReqSchema
+          payload: createLocationReqSchema
         }
       }
     },
     {
       method: 'GET',
-      path: '/informantSMSNotification',
-      handler: getInformantSMSNotificationsHandler,
+      path: '/locations/{locationId}',
+      handler: fetchLocationHandler,
       options: {
         tags: ['api'],
-        description: 'Get informantSMSNotifications',
-        auth: {
-          scope: [
-            RouteScope.NATLSYSADMIN,
-            RouteScope.DECLARE,
-            RouteScope.REGISTER,
-            RouteScope.CERTIFY,
-            RouteScope.VALIDATE
-          ]
+        auth: false,
+        description: 'Get a single location',
+        validate: {
+          params: requestParamsSchema
         }
       }
     },
     {
       method: 'PUT',
-      path: '/informantSMSNotification',
-      handler: updateInformantSMSNotificationHandler,
+      path: '/locations/{locationId}',
+      handler: updateLocationHandler,
       options: {
         tags: ['api'],
-        description: 'Update informantSMSNotification',
         auth: {
-          scope: [RouteScope.NATLSYSADMIN]
+          scope: ['natlsysadmin']
         },
+        description: 'Update a location or facility',
         validate: {
-          payload: updateInformantSMSNotificationReqSchema
+          payload: updateSchema,
+          params: requestParamsSchema
         }
       }
     },
     {
       method: 'GET',
-      path: '/location/{locationId}/hierarchy',
+      path: '/locations/{locationId}/hierarchy',
       handler: locationHierarchyHandler,
       options: {
         tags: ['api'],
@@ -275,12 +268,18 @@ export default function getRoutes(): ServerRoute[] {
     },
     {
       method: 'GET',
-      path: '/dashboardQueries',
-      handler: getDashboardQueries,
+      path: '/locations/{locationId}/children',
+      handler: resolveChildren,
       options: {
-        tags: ['api'],
         auth: false,
-        description: 'Fetch dashboard queries from country config'
+        tags: ['api'],
+        description:
+          'Retrieve all the children (multi-level) of a particular location',
+        validate: {
+          params: Joi.object({
+            locationId: Joi.string().uuid()
+          })
+        }
       }
     }
   ]

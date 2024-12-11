@@ -12,7 +12,6 @@ import { ApolloQueryResult } from '@apollo/client'
 import { ValidationInitializer } from '@client/utils/validate'
 import { IDynamicValues } from '@opencrvs/client/src/navigation'
 import { ICheckboxOption as CheckboxComponentOption } from '@opencrvs/components/lib/Checkbox'
-import { THEME_MODE } from '@opencrvs/components/lib/InputField'
 import {
   IRadioOption as RadioComponentOption,
   RadioSize
@@ -38,6 +37,7 @@ import {
   DEATH_REGISTRATION_NUMBER,
   NATIONAL_ID
 } from '@client/utils/constants'
+import { IconProps } from '@opencrvs/components/lib'
 
 export const TEXT = 'TEXT'
 export const TEL = 'TEL'
@@ -72,6 +72,10 @@ export const TIME = 'TIME'
 export const NID_VERIFICATION_BUTTON = 'NID_VERIFICATION_BUTTON'
 export const DIVIDER = 'DIVIDER'
 export const HEADING3 = 'HEADING3'
+export const SIGNATURE = 'SIGNATURE'
+export const HTTP = 'HTTP'
+export const BUTTON = 'BUTTON'
+export const REDIRECT = 'REDIRECT'
 
 export enum Sort {
   ASC = 'asc',
@@ -462,6 +466,12 @@ export enum REVIEW_OVERRIDE_POSITION {
   AFTER = 'after'
 }
 
+export type DependencyInfo = {
+  expression: string
+  dependsOn: string[]
+}
+export type InitialValue = IFormFieldValue | DependencyInfo
+
 export interface IFormFieldBase {
   name: string
   type: IFormField['type']
@@ -480,7 +490,7 @@ export interface IFormFieldBase {
   disabled?: boolean
   enabled?: string
   custom?: boolean
-  initialValue?: IFormFieldValue
+  initialValue?: InitialValue
   initialValueKey?: string
   extraValue?: IFormFieldValue
   conditionals?: Conditional[]
@@ -489,7 +499,6 @@ export interface IFormFieldBase {
   mapping?: IFormFieldMapping
   hideAsterisk?: boolean
   hideHeader?: boolean
-  mode?: THEME_MODE
   hidden?: boolean
   previewGroup?: string
   nestedFields?: { [key: string]: IFormField[] }
@@ -513,7 +522,6 @@ export interface IFormFieldBase {
   ignoreFieldLabelOnErrorMessage?: boolean
   ignoreBottomMargin?: boolean
   customQuestionMappingId?: string
-  ignoreMediaQuery?: boolean
 }
 
 export interface ISelectFormFieldWithOptions extends IFormFieldBase {
@@ -582,7 +590,6 @@ export interface INumberFormField extends IFormFieldBase {
   type: typeof NUMBER
   step?: number
   max?: number
-  inputFieldWidth?: string
   inputWidth?: number
   maxLength?: number
 }
@@ -648,8 +655,8 @@ export interface IDocumentUploaderWithOptionsFormField extends IFormFieldBase {
   compressImagesToSizeMB?: number
   maxSizeMB?: number
   options: ISelectOption[]
+  optionCondition?: string
   hideOnEmptyOption?: boolean
-  splitView?: boolean
 }
 export interface ISimpleDocumentUploaderFormField extends IFormFieldBase {
   type: typeof SIMPLE_DOCUMENT_UPLOADER
@@ -716,6 +723,42 @@ export interface INidVerificationButton extends IFormFieldBase {
   labelForOffline: MessageDescriptor
 }
 
+export interface ISignatureFormField extends IFormFieldBase {
+  type: typeof SIGNATURE
+  maxSizeMb?: number
+  allowedFileFormats?: (
+    | 'image/png'
+    | 'image/jpg'
+    | 'image/jpeg'
+    | 'image/svg'
+  )[]
+}
+
+export interface IHttpFormField extends IFormFieldBase {
+  type: typeof HTTP
+  options: {
+    headers: Record<string, string>
+    body: Record<string, any>
+  } & Omit<Request, 'body' | 'headers'>
+}
+export interface IButtonFormField extends IFormFieldBase {
+  type: typeof BUTTON
+  icon?: IconProps['name']
+  buttonLabel: MessageDescriptor
+  loadingLabel?: MessageDescriptor
+  options: {
+    trigger: string
+    shouldHandleLoadingState?: boolean
+  }
+}
+
+export interface IRedirectFormField extends IFormFieldBase {
+  type: typeof REDIRECT
+  options: {
+    url: string
+  }
+}
+
 export type IFormField =
   | ITextFormField
   | ITelFormField
@@ -749,6 +792,10 @@ export type IFormField =
   | ITimeFormFIeld
   | INidVerificationButton
   | IDividerFormField
+  | ISignatureFormField
+  | IHttpFormField
+  | IButtonFormField
+  | IRedirectFormField
 
 export interface IPreviewGroup {
   id: string
@@ -955,6 +1002,14 @@ export interface IFormSection {
   optional?: boolean
   notice?: MessageDescriptor
   mapping?: IFormSectionMapping
+  /**
+   * used for disabling continue button conditionally on a loading value
+   * of a FETCH field
+   * example: canContinue: '!$form.fetch?.loading'
+   * above example blocks user when fetch is on loading state, preventing implications
+   * caused by the unresolved pending requests
+   */
+  canContinue?: string
 }
 
 export type ISerializedFormSectionGroup = Omit<IFormSectionGroup, 'fields'> & {
@@ -999,7 +1054,7 @@ export interface Ii18nSelectOption {
 
 export interface Ii18nFormFieldBase {
   name: string
-  type: string
+  type: Ii18nFormField['type']
   label: string
   helperText?: string
   tooltip?: string
@@ -1015,12 +1070,11 @@ export interface Ii18nFormFieldBase {
   conditionals?: Conditional[]
   hideAsterisk?: boolean
   hideHeader?: boolean
-  mode?: THEME_MODE
   placeholder?: string
   hidden?: boolean
   nestedFields?: { [key: string]: Ii18nFormField[] }
   ignoreBottomMargin?: boolean
-  ignoreMediaQuery?: boolean
+  dependsOn?: string[]
 }
 
 export interface Ii18nSelectFormField extends Ii18nFormFieldBase {
@@ -1084,7 +1138,6 @@ export interface Ii18nNumberFormField extends Ii18nFormFieldBase {
   type: typeof NUMBER
   step?: number
   max?: number
-  inputFieldWidth?: string
   inputWidth?: number
   maxLength?: number
 }
@@ -1143,10 +1196,10 @@ export interface Ii18nImageUploaderWithOptionsFormField
 export interface Ii18nDocumentUploaderWithOptions extends Ii18nFormFieldBase {
   type: typeof DOCUMENT_UPLOADER_WITH_OPTION
   options: SelectComponentOption[]
+  optionCondition?: string
   compressImagesToSizeMB?: number
   maxSizeMB?: number
   hideOnEmptyOption?: boolean
-  splitView?: boolean
 }
 export interface Ii18nSimpleDocumentUploaderFormField
   extends Ii18nFormFieldBase {
@@ -1206,6 +1259,44 @@ export interface Ii18nTimeFormField extends Ii18nFormFieldBase {
   type: typeof TIME
   ignorePlaceHolder?: boolean
 }
+
+export interface Ii18nSignatureField extends Ii18nFormFieldBase {
+  type: typeof SIGNATURE
+  maxSizeMb?: number
+  allowedFileFormats?: (
+    | 'image/png'
+    | 'image/jpg'
+    | 'image/jpeg'
+    | 'image/svg'
+  )[]
+}
+
+export interface Ii18nHttpFormField extends Ii18nFormFieldBase {
+  type: typeof HTTP
+  options: {
+    headers: Record<string, string>
+    body: Record<string, any>
+  } & Omit<Request, 'body' | 'headers'>
+}
+
+export interface Ii18nButtonFormField extends Ii18nFormFieldBase {
+  type: typeof BUTTON
+  icon?: IconProps['name']
+  buttonLabel: string
+  loadingLabel?: string
+  options: {
+    trigger: string
+    shouldHandleLoadingState?: boolean
+  }
+}
+
+export interface Ii18nRedirectFormField extends Ii18nFormFieldBase {
+  type: typeof REDIRECT
+  options: {
+    url: string
+  }
+}
+
 export type Ii18nFormField =
   | Ii18nTextFormField
   | Ii18nTelFormField
@@ -1237,6 +1328,10 @@ export type Ii18nFormField =
   | Ii18nNidVerificationButtonField
   | I18nDividerField
   | I18nHeading3Field
+  | Ii18nSignatureField
+  | Ii18nHttpFormField
+  | Ii18nButtonFormField
+  | Ii18nRedirectFormField
 
 export interface IFormSectionData {
   [key: string]: IFormFieldValue

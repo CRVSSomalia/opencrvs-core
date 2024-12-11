@@ -24,6 +24,7 @@ import {
   Event,
   History,
   Query,
+  RegStatus,
   SystemRoleType
 } from '@client/utils/gateway'
 import { getRegisterForm } from '@client/forms/register/declaration-selectors'
@@ -87,6 +88,7 @@ import {
 import { ViewRecordQueries } from '@client/views/ViewRecord/query'
 import { UserDetails } from '@client/utils/userUtils'
 import { clearUnusedViewRecordCacheEntries } from '@client/utils/persistence'
+import { getReviewForm } from '@client/forms/register/review-selectors'
 
 const ARCHIVE_DECLARATION = 'DECLARATION/ARCHIVE'
 const SET_INITIAL_DECLARATION = 'DECLARATION/SET_INITIAL_DECLARATION'
@@ -204,14 +206,6 @@ export interface IVisitedGroupId {
 export interface ITaskHistory {
   operationType?: string
   operatedOn?: string
-  operatorRole?: string
-  operatorName?: Array<GQLHumanName | null>
-  operatorOfficeName?: string
-  operatorOfficeAlias?: Array<string | null>
-  notificationFacilityName?: string
-  notificationFacilityAlias?: Array<string | null>
-  rejectReason?: string
-  rejectComment?: string
 }
 
 export interface IDuplicates {
@@ -231,7 +225,7 @@ export interface IDeclaration {
   eventType?: string
   review?: boolean
   event: Event
-  registrationStatus?: string
+  registrationStatus?: RegStatus
   submissionStatus?: string
   downloadStatus?: DOWNLOAD_STATUS
   downloadRetryAttempt?: number
@@ -533,7 +527,7 @@ export function createReviewDeclaration(
   declarationId: string,
   formData: IFormData,
   event: Event,
-  status?: string,
+  status?: RegStatus,
   duplicates?: IDuplicates[]
 ): IDeclaration {
   return {
@@ -805,13 +799,19 @@ export async function updateWorkqueueData(
     const transformedDeclarationForGroom = draftToGqlTransformer(
       // transforming required section only
       { sections: groomSectionDefinition ? [groomSectionDefinition] : [] },
-      declaration.data
+      declaration.data,
+      declaration.id,
+      getUserDetails(state),
+      getOfflineData(state)
     )
 
     const transformedDeclarationForBride = draftToGqlTransformer(
       // transforming required section only
       { sections: brideSectionDefinition ? [brideSectionDefinition] : [] },
-      declaration.data
+      declaration.data,
+      declaration.id,
+      getUserDetails(state),
+      getOfflineData(state)
     )
 
     transformedNameForGroom =
@@ -838,7 +838,10 @@ export async function updateWorkqueueData(
     const transformedDeclaration = draftToGqlTransformer(
       // transforming required section only
       { sections: sectionDefinition ? [sectionDefinition] : [] },
-      declaration.data
+      declaration.data,
+      declaration.id,
+      getUserDetails(state),
+      getOfflineData(state)
     )
     transformedName =
       (transformedDeclaration &&
@@ -1177,7 +1180,7 @@ function downloadDeclarationSuccess({
   store: IStoreState
   client: ApolloClient<{}>
 }): IDownloadDeclarationSuccess {
-  const form = getRegisterForm(store)
+  const form = getReviewForm(store)
 
   return {
     type: DOWNLOAD_DECLARATION_SUCCESS,
@@ -1549,12 +1552,11 @@ export const declarationsReducer: LoopReducer<IDeclarationsState, Action> = (
         offlineData,
         userDetails
       )
-      const downloadedAppStatus: string =
-        (eventData &&
-          eventData.registration &&
-          eventData.registration.status &&
-          eventData.registration.status[0].type) ||
-        ''
+      const downloadedAppStatus =
+        eventData &&
+        eventData.registration &&
+        eventData.registration.status &&
+        eventData.registration.status[0].type
       const updateWorkqueue = () =>
         updateRegistrarWorkqueue(
           userDetails?.practitionerId,

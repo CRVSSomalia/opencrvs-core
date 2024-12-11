@@ -8,16 +8,17 @@
  *
  * Copyright (C) The OpenCRVS Authors located at https://github.com/opencrvs/opencrvs-core/blob/master/AUTHORS.
  */
-import { IAuthHeader } from '@opencrvs/commons'
+import { IAuthHeader, logger } from '@opencrvs/commons'
 import { USER_MANAGEMENT_URL } from '@gateway/constants'
 import {
   ISystemModelData,
   IUserModelData
 } from '@gateway/features/user/type-resolvers'
-import { logger } from '@opencrvs/commons'
 import * as decode from 'jwt-decode'
 import fetch from '@gateway/fetch'
 import { Scope } from '@opencrvs/commons/authentication'
+import { GQLUserInput } from '@gateway/graphql/schema'
+import { SysAdminAccessMap } from '@gateway/features/role/utils'
 
 export interface ITokenPayload {
   sub: string
@@ -48,6 +49,22 @@ export async function getUser(
     }
   })
   return await res.json()
+}
+
+export function canAssignRole(
+  loggedInUserScope: Scope[],
+  userToSave: GQLUserInput
+) {
+  let roleFilter: keyof typeof SysAdminAccessMap
+  if (loggedInUserScope.includes('natlsysadmin')) {
+    roleFilter = 'NATIONAL_SYSTEM_ADMIN'
+  } else if (loggedInUserScope.includes('sysadmin')) {
+    roleFilter = 'LOCAL_SYSTEM_ADMIN'
+  } else {
+    throw Error('Create user is only allowed for sysadmin/natlsysadmin')
+  }
+
+  return SysAdminAccessMap[roleFilter]?.includes(userToSave.systemRole)
 }
 
 export async function getSystem(

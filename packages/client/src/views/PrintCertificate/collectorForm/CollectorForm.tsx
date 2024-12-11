@@ -10,7 +10,8 @@
  */
 import { PrimaryButton, TertiaryButton } from '@opencrvs/components/lib/buttons'
 import { ErrorText } from '@opencrvs/components/lib/ErrorText'
-import { Content } from '@opencrvs/components/lib/Content'
+import { Content, ContentSize } from '@opencrvs/components/lib/Content'
+import { Button } from '@opencrvs/components/lib/Button'
 
 import { ActionPageLight } from '@opencrvs/components/lib/ActionPageLight'
 import { ResponsiveModal } from '@opencrvs/components/lib/ResponsiveModal'
@@ -97,6 +98,8 @@ type PropsWhenDeclarationIsFound = {
 }
 type PropsWhenDeclarationIsNotFound = {
   declaration: undefined
+  offlineCountryConfiguration: IOfflineData
+  userDetails: UserDetails | null
 }
 
 interface IBaseProps {
@@ -146,14 +149,19 @@ function getNextSectionIds(
 const getErrorsOnFieldsBySection = (
   sectionId: keyof IPrintableDeclaration['data'],
   fields: IFormField[],
-  draft: IPrintableDeclaration
+  draft: IPrintableDeclaration,
+  config: IOfflineData,
+  user: UserDetails | null
 ) => {
   const certificates = draft.data.registration.certificates
   const certificate = (certificates && certificates[0]) || {}
   const errors = getValidationErrorsForForm(
     fields,
     (certificate[sectionId as keyof typeof certificate] as IFormSectionData) ||
-      {}
+      {},
+    config,
+    draft.data,
+    user
   )
 
   return {
@@ -235,7 +243,13 @@ class CollectorFormComponent extends React.Component<IProps, IState> {
     if (!draft) return
     console.log(draft)
 
-    const errors = getErrorsOnFieldsBySection(sectionId, fields, draft)
+    const errors = getErrorsOnFieldsBySection(
+      sectionId,
+      fields,
+      draft,
+      this.props.offlineCountryConfiguration,
+      this.props.userDetails
+    )
     const errorValues = Object.values(errors).map(Object.values)
     const errLength = flatten(errorValues).filter(
       (errs) => errs.length > 0
@@ -391,11 +405,35 @@ class CollectorFormComponent extends React.Component<IProps, IState> {
             title={
               (formGroup.title && intl.formatMessage(formGroup.title)) || ''
             }
+            size={ContentSize.SMALL}
             showTitleOnMobile
+            bottomActionButtons={[
+              <Button
+                key="confirm_form"
+                id="confirm_form"
+                type="primary"
+                size="large"
+                fullWidth
+                onClick={() => {
+                  this.continueButtonHandler(
+                    declarationToBeCertified.id,
+                    formGroup.id,
+                    nextSectionGroup ? nextSectionGroup.groupId : undefined,
+                    event,
+                    formSection.id,
+                    formGroup.fields,
+                    declarationToBeCertified
+                  )
+                }}
+                disabled={this.state.isFileUploading}
+              >
+                {intl.formatMessage(buttonMessages.continueButton)}
+              </Button>
+            ]}
           >
             {showError && (
               <ErrorWrapper>
-                <ErrorText id="form_error" ignoreMediaQuery={true}>
+                <ErrorText id="form_error">
                   {(formGroup.error && intl.formatMessage(formGroup.error)) ||
                     ''}
                 </ErrorText>
@@ -509,16 +547,21 @@ const mapStateToProps = (
 ): PropsWhenDeclarationIsFound | PropsWhenDeclarationIsNotFound => {
   const { registrationId, eventType, groupId } = props.match.params
   const event = getEvent(eventType)
+  const userDetails = getUserDetails(state)
+  const offlineCountryConfiguration = getOfflineData(state)
 
   const declaration = state.declarationsState.declarations.find(
     (declaration) => declaration.id === registrationId
   ) as IPrintableDeclaration | undefined
 
   if (!declaration) {
-    return { declaration: undefined }
+    return {
+      declaration: undefined,
+      offlineCountryConfiguration: getOfflineData(state),
+      userDetails
+    }
   }
 
-  const userDetails = getUserDetails(state)
   const userOfficeId = userDetails?.primaryOffice?.id
   const registeringOfficeId = getRegisteringOfficeId(declaration)
   const certFormSection = getCertificateCollectorFormSection(declaration)
@@ -561,7 +604,9 @@ const mapStateToProps = (
         declaration.data.registration.certificates.length - 1
       ].collector) ||
       {},
-    declaration && declaration.data
+    declaration && declaration.data,
+    offlineCountryConfiguration,
+    userDetails
   )
 
   return {

@@ -38,7 +38,6 @@ export interface GQLQuery {
   fetchRecordDetailsForVerification?: GQLRecordDetails
   locationsByParent?: Array<GQLLocation | null>
   locationById?: GQLLocation
-  hasChildLocation?: GQLLocation
   getUser?: GQLUser
   getUserByMobile?: GQLUser
   getUserByEmail?: GQLUser
@@ -113,8 +112,6 @@ export interface GQLMutation {
   usernameReminder?: string
   resetPasswordInvite?: string
   updateRole: GQLResponse
-  createOrUpdateCertificateSVG?: GQLCertificateSVG
-  updateApplicationConfig?: GQLApplicationConfiguration
   reactivateSystem?: GQLSystem
   deactivateSystem?: GQLSystem
   registerSystem?: GQLSystemSecret
@@ -123,7 +120,6 @@ export interface GQLMutation {
   deleteSystem?: GQLSystem
   bookmarkAdvancedSearch?: GQLBookMarkedSearches
   removeBookmarkedAdvancedSearch?: GQLBookMarkedSearches
-  toggleInformantSMSNotification?: Array<GQLSMSNotification>
 }
 
 export interface GQLDummy {
@@ -304,7 +300,6 @@ export interface GQLUser {
   status: GQLStatus
   underInvestigation?: boolean
   primaryOffice?: GQLLocation
-  catchmentArea?: Array<GQLLocation>
   localRegistrar?: GQLLocalRegistrar
   identifier?: GQLIdentifier
   signature?: GQLSignature
@@ -672,7 +667,6 @@ export interface GQLUserInput {
   role?: string
   email?: string
   primaryOffice?: string
-  catchmentArea?: Array<string | null>
   device?: string
   signature?: GQLSignatureInput
 }
@@ -813,11 +807,6 @@ export interface GQLRegistration {
   brideSignature?: string
   witnessOneSignature?: string
   witnessTwoSignature?: string
-  informantsSignatureURI?: string
-  groomSignatureURI?: string
-  brideSignatureURI?: string
-  witnessOneSignatureURI?: string
-  witnessTwoSignatureURI?: string
   contactPhoneNumber?: string
   contactEmail?: string
   status?: Array<GQLRegWorkflow | null>
@@ -2063,7 +2052,6 @@ export interface GQLQueryTypeResolver<TParent = any> {
   fetchRecordDetailsForVerification?: QueryToFetchRecordDetailsForVerificationResolver<TParent>
   locationsByParent?: QueryToLocationsByParentResolver<TParent>
   locationById?: QueryToLocationByIdResolver<TParent>
-  hasChildLocation?: QueryToHasChildLocationResolver<TParent>
   getUser?: QueryToGetUserResolver<TParent>
   getUserByMobile?: QueryToGetUserByMobileResolver<TParent>
   getUserByEmail?: QueryToGetUserByEmailResolver<TParent>
@@ -2803,8 +2791,6 @@ export interface GQLMutationTypeResolver<TParent = any> {
   usernameReminder?: MutationToUsernameReminderResolver<TParent>
   resetPasswordInvite?: MutationToResetPasswordInviteResolver<TParent>
   updateRole?: MutationToUpdateRoleResolver<TParent>
-  createOrUpdateCertificateSVG?: MutationToCreateOrUpdateCertificateSVGResolver<TParent>
-  updateApplicationConfig?: MutationToUpdateApplicationConfigResolver<TParent>
   reactivateSystem?: MutationToReactivateSystemResolver<TParent>
   deactivateSystem?: MutationToDeactivateSystemResolver<TParent>
   registerSystem?: MutationToRegisterSystemResolver<TParent>
@@ -2813,7 +2799,6 @@ export interface GQLMutationTypeResolver<TParent = any> {
   deleteSystem?: MutationToDeleteSystemResolver<TParent>
   bookmarkAdvancedSearch?: MutationToBookmarkAdvancedSearchResolver<TParent>
   removeBookmarkedAdvancedSearch?: MutationToRemoveBookmarkedAdvancedSearchResolver<TParent>
-  toggleInformantSMSNotification?: MutationToToggleInformantSMSNotificationResolver<TParent>
 }
 
 export interface MutationToCreateNotificationArgs {
@@ -4443,7 +4428,6 @@ export interface GQLUserTypeResolver<TParent = any> {
   status?: UserToStatusResolver<TParent>
   underInvestigation?: UserToUnderInvestigationResolver<TParent>
   primaryOffice?: UserToPrimaryOfficeResolver<TParent>
-  catchmentArea?: UserToCatchmentAreaResolver<TParent>
   localRegistrar?: UserToLocalRegistrarResolver<TParent>
   identifier?: UserToIdentifierResolver<TParent>
   signature?: UserToSignatureResolver<TParent>
@@ -5372,11 +5356,6 @@ export interface GQLRegistrationTypeResolver<TParent = any> {
   brideSignature?: RegistrationToBrideSignatureResolver<TParent>
   witnessOneSignature?: RegistrationToWitnessOneSignatureResolver<TParent>
   witnessTwoSignature?: RegistrationToWitnessTwoSignatureResolver<TParent>
-  informantsSignatureURI?: RegistrationToInformantsSignatureURIResolver<TParent>
-  groomSignatureURI?: RegistrationToGroomSignatureURIResolver<TParent>
-  brideSignatureURI?: RegistrationToBrideSignatureURIResolver<TParent>
-  witnessOneSignatureURI?: RegistrationToWitnessOneSignatureURIResolver<TParent>
-  witnessTwoSignatureURI?: RegistrationToWitnessTwoSignatureURIResolver<TParent>
   contactPhoneNumber?: RegistrationToContactPhoneNumberResolver<TParent>
   contactEmail?: RegistrationToContactEmailResolver<TParent>
   status?: RegistrationToStatusResolver<TParent>
@@ -5493,41 +5472,6 @@ export interface RegistrationToWitnessOneSignatureResolver<
 }
 
 export interface RegistrationToWitnessTwoSignatureResolver<
-  TParent = any,
-  TResult = any
-> {
-  (parent: TParent, args: {}, context: any, info: GraphQLResolveInfo): TResult
-}
-
-export interface RegistrationToInformantsSignatureURIResolver<
-  TParent = any,
-  TResult = any
-> {
-  (parent: TParent, args: {}, context: any, info: GraphQLResolveInfo): TResult
-}
-
-export interface RegistrationToGroomSignatureURIResolver<
-  TParent = any,
-  TResult = any
-> {
-  (parent: TParent, args: {}, context: any, info: GraphQLResolveInfo): TResult
-}
-
-export interface RegistrationToBrideSignatureURIResolver<
-  TParent = any,
-  TResult = any
-> {
-  (parent: TParent, args: {}, context: any, info: GraphQLResolveInfo): TResult
-}
-
-export interface RegistrationToWitnessOneSignatureURIResolver<
-  TParent = any,
-  TResult = any
-> {
-  (parent: TParent, args: {}, context: any, info: GraphQLResolveInfo): TResult
-}
-
-export interface RegistrationToWitnessTwoSignatureURIResolver<
   TParent = any,
   TResult = any
 > {

@@ -22,7 +22,6 @@ import {
   ILocation,
   IOfflineData
 } from '@client/offline/reducer'
-import { getUserName } from '@client/pdfRenderer/transformer/userTransformer'
 import format from '@client/utils/date-formatting'
 import {
   EventRegistration,
@@ -39,6 +38,8 @@ import {
   countryAlpha3toAlpha2,
   getLocationHierarchy
 } from '@client/utils/locationUtils'
+import { createNamesMap } from '@client/utils/data-formatting'
+import { LANG_EN } from '@client/utils/constants'
 
 /** @deprecated Use userTransformer instead */
 export const roleUserTransformer = (
@@ -150,7 +151,7 @@ export const localPhoneTransformer =
   }
 
 const getUserFullName = (history: History): string => {
-  return history?.user ? getUserName(history.user) : ''
+  return history?.user?.name ? createNamesMap(history.user.name)[LANG_EN] : ''
 }
 
 const getUserRole = (history: History): MessageDescriptor => {
@@ -234,7 +235,7 @@ export const registrarNameUserTransformer = (
       !action && regStatus === RegStatus.Registered
   )
   transformedData[targetSectionId || sectionId][targetFieldName || 'userName'] =
-    history?.user ? getUserName(history.user) : ''
+    getUserFullName(history)
 }
 export const registrationLocationUserTransformer = (
   transformedData: IFormData,

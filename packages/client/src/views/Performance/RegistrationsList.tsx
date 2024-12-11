@@ -398,7 +398,10 @@ function RegistrationListComponent(props: IProps) {
   }
 
   const getTableContentByRegistrar = (
-    result: RegistrationsListByRegistrarFilter['results'][0],
+    result: Extract<
+      GetRegistrationsListByFilterQuery['getRegistrationsListByFilter'],
+      { __typename: 'TotalMetricsByRegistrar' }
+    >['results'][0],
     index: number
   ) => ({
     ...result,
@@ -463,7 +466,10 @@ function RegistrationListComponent(props: IProps) {
   })
 
   const getTableContentByLocation = (
-    result: RegistrationsListByLocationFilter['results'][0],
+    result: Extract<
+      GetRegistrationsListByFilterQuery['getRegistrationsListByFilter'],
+      { __typename: 'TotalMetricsByLocation' }
+    >['results'][0],
     index: number
   ) => ({
     ...result,
@@ -485,7 +491,10 @@ function RegistrationListComponent(props: IProps) {
   })
 
   const getTableContentByTime = (
-    result: RegistrationsListByTimeFilter['results'][0],
+    result: Extract<
+      GetRegistrationsListByFilterQuery['getRegistrationsListByFilter'],
+      { __typename: 'TotalMetricsByTime' }
+    >['results'][0],
     index: number
   ) => {
     return {

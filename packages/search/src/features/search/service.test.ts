@@ -12,12 +12,17 @@ import {
   advancedSearch,
   formatSearchParams
 } from '@search/features/search/service'
-import { client } from '@search/elasticsearch/client'
+import * as esClient from '@search/elasticsearch/client'
 import { SortOrder } from '@search/features/search/types'
+import { UUID } from '@opencrvs/commons'
 
-describe('elasticsearch db helper', () => {
+describe('Search service', () => {
   it('should index a composition with proper configuration', async () => {
-    const searchSpy = jest.spyOn(client, 'search')
+    const searchMock = jest.fn()
+    jest.spyOn(esClient, 'getOrCreateClient').mockReturnValue({
+      search: searchMock
+    } as any)
+
     await advancedSearch(false, {
       parameters: {
         trackingId: 'dummy',
@@ -26,27 +31,36 @@ describe('elasticsearch db helper', () => {
         event: 'birth',
         registrationStatuses: ['DECLARED'],
         compositionType: ['birth-declaration', 'death-declaration'],
-        declarationLocationId: ''
+        declarationLocationId: '00000000-0000-0000-0000-000000000001' as UUID
       },
       from: 0,
       size: 10
     })
-    expect(searchSpy).toBeCalled()
+    expect(searchMock).toBeCalled()
   })
 
   it('should index a composition with minimum configuration', async () => {
-    const searchSpy = jest.spyOn(client, 'search')
-    advancedSearch(false, {
+    const searchMock = jest.fn()
+    jest.spyOn(esClient, 'getOrCreateClient').mockReturnValue({
+      search: searchMock
+    } as any)
+
+    await advancedSearch(false, {
       parameters: {
         event: 'birth'
       }
     })
-    expect(searchSpy).toBeCalled()
+
+    expect(searchMock).toBeCalled()
   })
 
   it('should index a composition and call combination search configuration', async () => {
-    const searchSpy = jest.spyOn(client, 'search')
-    advancedSearch(false, {
+    const searchMock = jest.fn()
+    jest.spyOn(esClient, 'getOrCreateClient').mockReturnValue({
+      search: searchMock
+    } as any)
+
+    await advancedSearch(false, {
       parameters: {
         trackingId: 'dummy',
         contactNumber: 'dummy',
@@ -58,13 +72,13 @@ describe('elasticsearch db helper', () => {
       from: 0,
       size: 10
     })
-    expect(searchSpy).toBeCalled()
+    expect(searchMock).toBeCalled()
   })
 })
 
 describe('elasticsearch params formatter', () => {
-  it('should prepare search params to search birth declarations using a single name against all fields', () => {
-    const params = formatSearchParams(
+  it('should prepare search params to search birth declarations using a single name against all fields', async () => {
+    const params = await formatSearchParams(
       {
         parameters: {
           trackingId: 'myTrackingId',
@@ -73,8 +87,8 @@ describe('elasticsearch params formatter', () => {
           event: 'birth',
           registrationStatuses: ['DECLARED'],
           compositionType: ['birth-declaration'],
-          declarationLocationId: '123',
-          eventLocationId: '456'
+          declarationLocationId: '00000000-0000-0000-0000-000000000002' as UUID,
+          eventLocationId: '00000000-0000-0000-0000-000000000003' as UUID
         },
         createdBy: 'EMPTY_STRING',
         from: 0,
@@ -107,13 +121,13 @@ describe('elasticsearch params formatter', () => {
                 match: {
                   declarationLocationId: {
                     boost: 2,
-                    query: '123'
+                    query: '00000000-0000-0000-0000-000000000002'
                   }
                 }
               },
               {
                 match: {
-                  eventLocationId: '456'
+                  eventLocationId: '00000000-0000-0000-0000-000000000003'
                 }
               },
               {
@@ -143,17 +157,18 @@ describe('elasticsearch params formatter', () => {
                   'compositionType.keyword': ['birth-declaration']
                 }
               }
-            ],
-            should: []
+            ]
           }
         },
-        sort: [{ dateOfDeclaration: 'asc' }]
+        sort: [
+          { dateOfDeclaration: { order: 'asc', unmapped_type: 'keyword' } }
+        ]
       }
     })
   })
 
-  it('should prepare search params to search birth declarations using names against all name fields', () => {
-    const params = formatSearchParams(
+  it('should prepare search params to search birth declarations using names against all name fields', async () => {
+    const params = await formatSearchParams(
       {
         parameters: {
           name: 'sadman anik'
@@ -202,11 +217,12 @@ describe('elasticsearch params formatter', () => {
                   fuzziness: 'AUTO'
                 }
               }
-            ],
-            should: []
+            ]
           }
         },
-        sort: [{ dateOfDeclaration: 'asc' }]
+        sort: [
+          { dateOfDeclaration: { order: 'asc', unmapped_type: 'keyword' } }
+        ]
       }
     })
   })
