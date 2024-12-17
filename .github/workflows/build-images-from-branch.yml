@@ -82,9 +82,9 @@ jobs:
           context: .
           push: true
           tags: |
-            opencrvs/ocrvs-base:${{ steps.set-version-and-branch.outputs.version }}
-            opencrvs/ocrvs-base:${{ steps.set-version-and-branch.outputs.branch }}
-          cache-from: type=registry,ref=opencrvs/ocrvs-base:${{ steps.set-version-and-branch.outputs.branch }}
+            ecrvs/ocrvs-base:${{ steps.set-version-and-branch.outputs.version }}
+            ecrvs/ocrvs-base:${{ steps.set-version-and-branch.outputs.branch }}
+          cache-from: type=registry,ref=ecrvs/ocrvs-base:${{ steps.set-version-and-branch.outputs.branch }}
           cache-to: type=inline
 
     outputs:
@@ -124,9 +124,9 @@ jobs:
           push: true
           context: .
           tags: |
-            opencrvs/ocrvs-${{ matrix.service }}:${{ needs.base.outputs.version }}
-            opencrvs/ocrvs-${{ matrix.service }}:${{ needs.base.outputs.branch }}
-          cache-from: type=registry,ref=opencrvs/ocrvs-${{ matrix.service }}:${{ needs.base.outputs.branch }}
+            ecrvs/ocrvs-${{ matrix.service }}:${{ needs.base.outputs.version }}
+            ecrvs/ocrvs-${{ matrix.service }}:${{ needs.base.outputs.branch }}
+          cache-from: type=registry,ref=ecrvs/ocrvs-${{ matrix.service }}:${{ needs.base.outputs.branch }}
           cache-to: type=inline
 
   security-scans-pr:
@@ -146,7 +146,7 @@ jobs:
       - name: Gather Trivy output from base branch image
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: 'opencrvs/ocrvs-${{ matrix.service }}:${{ github.event.pull_request.base.ref }}'
+          image-ref: 'ecrvs/ocrvs-${{ matrix.service }}:${{ github.event.pull_request.base.ref }}'
           trivy-config: trivy.yaml
           format: 'sarif'
           output: './trivy-results-base.sarif'
@@ -155,7 +155,7 @@ jobs:
       - name: Gather Trivy output from newly build image
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: 'opencrvs/ocrvs-${{ matrix.service }}:${{ needs.base.outputs.version }}'
+          image-ref: 'ecrvs/ocrvs-${{ matrix.service }}:${{ needs.base.outputs.version }}'
           trivy-config: trivy.yaml
           format: 'sarif'
           output: './trivy-results-branch.sarif'
