@@ -8,7 +8,7 @@
  *
  * Copyright (C) The OpenCRVS Authors located at https://github.com/opencrvs/opencrvs-core/blob/master/AUTHORS.
  */
-
+ 
 export const HOST = process.env.HOST || 'localhost'
 export const PORT = process.env.PORT || 2020
 

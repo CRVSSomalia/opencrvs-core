@@ -1475,24 +1475,3 @@ export async function getLocationsById(
 
   return res.json()
 }
-
-export async function getLocationsById(
-  locationIds: Array<string>
-): Promise<Bundle<Location>> {
-  const res = await fetch(
-    new URL(`/fhir/Location?_id=${locationIds.join(',')}`, FHIR_URL).href,
-    {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/fhir+json'
-      }
-    }
-  )
-  if (!res.ok) {
-    throw new Error(
-      `Fetching locations from Hearth failed with [${res.status}] body: ${res.statusText}`
-    )
-  }
-
-  return res.json()
-}

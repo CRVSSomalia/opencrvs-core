@@ -9,10 +9,8 @@
  * Copyright (C) The OpenCRVS Authors located at https://github.com/opencrvs/opencrvs-core/blob/master/AUTHORS.
  */
 import * as elasticsearch from '@elastic/elasticsearch'
-import { logger } from '@opencrvs/commons'
 import { OPENCRVS_INDEX_NAME } from '@search/constants'
 import { logger, SearchDocument } from '@opencrvs/commons'
-import * as elasticsearch from '@elastic/elasticsearch'
 
 export const indexComposition = async (
   compositionIdentifier: string,

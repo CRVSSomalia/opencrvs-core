@@ -20,7 +20,6 @@ import {
   getTaskFromSavedBundle,
   InProgressRecord,
   Patient,
-  InProgressRecord,
   ReadyForReviewRecord,
   RegisteredRecord,
   RelatedPerson,
