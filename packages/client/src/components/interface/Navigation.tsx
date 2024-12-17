@@ -19,7 +19,6 @@ import { navigationMessages } from '@client/i18n/messages/views/navigation'
 import {
   goToAdvancedSearchResult,
   goToAllUserEmail,
-  goToCertificateConfig,
   goToDashboardView,
   goToHomeTab,
   goToLeaderBoardsView,
@@ -296,7 +295,6 @@ const NavigationView = (props: IFullProps) => {
     enableMenuSelection = true,
     loadWorkqueueStatuses = true,
     activeMenuItem,
-    goToCertificateConfigAction,
     goToVSExportsAction,
     goToSystemViewAction,
     goToAdvancedSearchResultAction,
@@ -708,17 +706,6 @@ const NavigationView = (props: IFullProps) => {
                         configTab.includes(activeMenuItem)) && (
                         <>
                           <NavigationSubItem
-                            label={intl.formatMessage(
-                              navigationMessages[WORKQUEUE_TABS.certificate]
-                            )}
-                            id={`navigation_${WORKQUEUE_TABS.certificate}`}
-                            onClick={goToCertificateConfigAction}
-                            isSelected={
-                              enableMenuSelection &&
-                              activeMenuItem === WORKQUEUE_TABS.certificate
-                            }
-                          />
-                          <NavigationSubItem
                             id={`navigation_${WORKQUEUE_TABS.systems}`}
                             label={intl.formatMessage(
                               navigationMessages[WORKQUEUE_TABS.systems]
@@ -974,7 +961,6 @@ export const Navigation = connect<
   IStoreState
 >(mapStateToProps, {
   goToHomeTab,
-  goToCertificateConfigAction: goToCertificateConfig,
   goToAdvancedSearchResultAction: goToAdvancedSearchResult,
   goToVSExportsAction: goToVSExport,
   goToPerformanceViewAction: goToPerformanceView,
