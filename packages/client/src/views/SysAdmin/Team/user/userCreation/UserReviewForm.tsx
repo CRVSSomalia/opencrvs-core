@@ -8,7 +8,6 @@
  *
  * Copyright (C) The OpenCRVS Authors located at https://github.com/opencrvs/opencrvs-core/blob/master/AUTHORS.
  */
-import { SimpleDocumentUploader } from '@client/components/form/DocumentUploadfield/SimpleDocumentUploader'
 import {
   DIVIDER,
   FIELD_GROUP_TITLE,
@@ -47,11 +46,8 @@ import {
   submitUserFormData
 } from '@client/user/userReducer'
 import { Action } from '@client/views/SysAdmin/Team/user/userCreation/UserForm'
-import {
-  PrimaryButton,
-  SuccessButton,
-  ICON_ALIGNMENT
-} from '@opencrvs/components/lib/buttons'
+import { SuccessButton, ICON_ALIGNMENT } from '@opencrvs/components/lib/buttons'
+import { Button } from '@opencrvs/components/lib/Button'
 import { IDynamicValues } from '@opencrvs/components/lib/common-types'
 import { ActionPageLight } from '@opencrvs/components/lib/ActionPageLight'
 import { ApolloClient } from '@apollo/client'
@@ -84,7 +80,7 @@ interface IUserReviewFormProps {
 interface IDispatchProps {
   goToCreateUserSection: typeof goToCreateUserSection
   goToUserReviewForm: typeof goToUserReviewForm
-  submitForm: (userFormSection: IFormSection) => void
+  submitForm: (variables: Record<string, any>) => void
   userFormSection: IFormSection
   offlineCountryConfiguration: IOfflineData
   goBack: typeof goBack
@@ -117,12 +113,6 @@ const Label = styled.span`
   width: 100%;
 `
 
-const DocumentUploaderContainer = styled.div`
-  @media (max-width: ${({ theme }) => theme.grid.breakpoints.md}px) {
-    padding-right: 8px;
-  }
-`
-
 const Value = styled.span`
   ${({ theme }) => theme.fonts.reg16}
 `
@@ -131,7 +121,7 @@ class UserReviewFormComponent extends React.Component<
   IFullProps & IDispatchProps
 > {
   transformSectionData = () => {
-    const { intl, userFormSection } = this.props
+    const { intl, userFormSection, userDetails } = this.props
     let nameJoined = false,
       fieldValue
     const sections: ISectionData[] = []
@@ -150,9 +140,13 @@ class UserReviewFormComponent extends React.Component<
           if (field.name === 'username' && !this.getValue(field)) return
           let label = intl.formatMessage(field.label)
           if (
-            !getConditionalActionsForField(field, this.props.formData).includes(
-              'hide'
-            )
+            !getConditionalActionsForField(
+              field,
+              this.props.formData,
+              this.props.offlineCountryConfiguration,
+              { user: this.props.formData },
+              userDetails
+            ).includes('hide')
           ) {
             fieldValue = this.getValue(field)
 
@@ -263,12 +257,31 @@ class UserReviewFormComponent extends React.Component<
     )}`
   }
 
+  handleSubmit = () => {
+    const variables = draftToGqlTransformer(
+      { sections: [this.props.userFormSection] },
+      { user: this.props.formData },
+      '',
+      this.props.userDetails,
+      this.props.offlineCountryConfiguration
+    )
+    if (variables.user._fhirID) {
+      variables.user.id = variables.user._fhirID
+      delete variables.user._fhirID
+    }
+
+    if (variables.user.signature) {
+      delete variables.user.signature.name
+      delete variables.user.signature.__typename //to fix updating registrar bug
+    }
+    this.props.submitForm(variables)
+  }
+
   render() {
     const {
       intl,
       section,
       userId,
-      userFormSection,
       formData,
       goToTeamUserList,
       userDetails,
@@ -291,7 +304,7 @@ class UserReviewFormComponent extends React.Component<
               this.props.formData.systemRole === 'NATIONAL_REGISTRAR') &&
             !this.props.formData.signature
           }
-          onClick={() => this.props.submitForm(userFormSection)}
+          onClick={this.handleSubmit}
           icon={() => <Check />}
           align={ICON_ALIGNMENT.LEFT}
         >
@@ -301,17 +314,20 @@ class UserReviewFormComponent extends React.Component<
     } else {
       title = section.title && intl.formatMessage(section.title)
       actionComponent = (
-        <PrimaryButton
+        <Button
           id="submit_user_form"
+          type="positive"
+          size="large"
+          fullWidth
           disabled={
             (this.props.formData.systemRole === 'LOCAL_REGISTRAR' ||
               this.props.formData.systemRole === 'NATIONAL_REGISTRAR') &&
             !this.props.formData.signature
           }
-          onClick={() => this.props.submitForm(userFormSection)}
+          onClick={this.handleSubmit}
         >
           {intl.formatMessage(messages.createUser)}
-        </PrimaryButton>
+        </Button>
       )
     }
     return (
@@ -367,21 +383,7 @@ const mapDispatchToProps = (dispatch: Dispatch, props: IFullProps) => {
     goBack: () => dispatch(goBack()),
     goToTeamUserList: (id: string) => dispatch(goToTeamUserList(id)),
     modify: (values: IFormSectionData) => dispatch(modifyUserFormData(values)),
-    submitForm: (userFormSection: IFormSection) => {
-      const variables = draftToGqlTransformer(
-        { sections: [userFormSection] },
-        { user: props.formData }
-      )
-      if (variables.user._fhirID) {
-        variables.user.id = variables.user._fhirID
-        delete variables.user._fhirID
-      }
-
-      if (variables.user.signature) {
-        delete variables.user.signature.name
-        delete variables.user.signature.__typename //to fix updating registrar bug
-      }
-
+    submitForm: (variables: Record<string, any>) => {
       dispatch(
         submitUserFormData(
           props.client,

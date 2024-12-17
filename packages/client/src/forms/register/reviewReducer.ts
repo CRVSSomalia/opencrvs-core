@@ -8,12 +8,11 @@
  *
  * Copyright (C) The OpenCRVS Authors located at https://github.com/opencrvs/opencrvs-core/blob/master/AUTHORS.
  */
-import { LoopReducer, Loop } from 'redux-loop'
-import { IForm, ReviewSection } from '@client/forms'
-import { messages } from '@client/i18n/messages/views/review'
+import { LoopReducer, Loop, loop, Cmd } from 'redux-loop'
+import { IForm } from '@client/forms'
 import * as offlineActions from '@client/offline/actions'
 import { deserializeForm } from '@client/forms/deserializer/deserializer'
-import { validators } from '@client/forms/validators'
+import { initValidators, validators } from '@client/forms/validators'
 
 export type IReviewFormState =
   | {
@@ -47,24 +46,24 @@ export const reviewReducer: LoopReducer<IReviewFormState, Action> = (
   switch (action.type) {
     case offlineActions.READY:
     case offlineActions.FORMS_LOADED:
+      return loop(
+        state,
+        Cmd.run(
+          async () => {
+            await initValidators()
+            return action.payload
+          },
+          {
+            successActionCreator: offlineActions.CustomValidatorsSuccess
+          }
+        )
+      )
+    case offlineActions.CUSTOM_VALIDATORS_LOADED:
       const { forms } = action.payload
 
       const birth = deserializeForm(forms.birth, validators)
       const death = deserializeForm(forms.death, validators)
       const marriage = deserializeForm(forms.marriage, validators)
-
-      const review = {
-        id: ReviewSection.Review,
-        viewType: 'review' as const,
-        name: messages.reviewName,
-        title: messages.reviewTitle,
-        groups: [
-          {
-            id: 'review-view-group',
-            fields: []
-          }
-        ]
-      }
 
       return {
         ...state,
@@ -72,15 +71,27 @@ export const reviewReducer: LoopReducer<IReviewFormState, Action> = (
         reviewForm: {
           birth: {
             ...birth,
-            sections: [...birth.sections, review]
+            sections: [
+              ...birth.sections.filter(({ viewType }) =>
+                ['form', 'hidden', 'review'].includes(viewType)
+              )
+            ]
           },
           death: {
             ...death,
-            sections: [...death.sections, review]
+            sections: [
+              ...death.sections.filter(({ viewType }) =>
+                ['form', 'hidden', 'review'].includes(viewType)
+              )
+            ]
           },
           marriage: {
             ...marriage,
-            sections: [...marriage.sections, review]
+            sections: [
+              ...marriage.sections.filter(({ viewType }) =>
+                ['form', 'hidden', 'review'].includes(viewType)
+              )
+            ]
           }
         }
       }

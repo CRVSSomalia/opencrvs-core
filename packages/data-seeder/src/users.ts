@@ -129,7 +129,15 @@ async function getOfficeIdFromIdentifier(identifier: string) {
       }
     }
   )
+  if (!response.ok) {
+    console.error(
+      `Error fetching location with identifier ${identifier}`,
+      response.statusText
+    )
+    throw new Error('Error fetching location')
+  }
   const locationBundle: fhir3.Bundle<fhir3.Location> = await response.json()
+
   return locationBundle.entry?.[0]?.resource?.id
 }
 

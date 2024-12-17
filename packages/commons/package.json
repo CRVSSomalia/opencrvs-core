@@ -1,6 +1,6 @@
 {
   "name": "@opencrvs/commons",
-  "version": "1.5.1",
+  "version": "1.6.1",
   "description": "OpenCRVS common modules and utils",
   "license": "MPL-2.0",
   "main": "./build/dist/index.js",
@@ -11,7 +11,8 @@
     "./logger": "./build/dist/logger.js",
     "./authentication": "./build/dist/authentication.js",
     "./http": "./build/dist/http.js",
-    "./fixtures": "./build/dist/fixtures.js"
+    "./fixtures": "./build/dist/fixtures.js",
+    "./assignment": "./build/dist/assignment.js"
   },
   "scripts": {
     "start": "yarn build:watch",
@@ -34,9 +35,8 @@
     "@types/uuid": "^9.0.3",
     "date-fns": "^2.28.0",
     "elastic-apm-node": "^3.29.0",
-    "jest": "26.6.3",
+    "jest": "27.5.1",
     "jwt-decode": "^2.2.0",
-    "lint-staged": "^15.2.2",
     "lodash": "^4.17.10",
     "node-fetch": "^2.6.7",
     "pkg-up": "^3.1.0",
@@ -53,11 +53,12 @@
     "eslint-plugin-prettier": "^4.0.0",
     "jest-fetch-mock": "^2.1.2",
     "pino-pretty": "^11.0.0",
-    "ts-jest": "^26.4.4"
+    "ts-jest": "27.1.4"
   },
   "lint-staged": {
-    "src/**/*.{ts,graphql}": [
-      "prettier --write"
+    "src/**/*.ts": [
+      "prettier --write",
+      "eslint --fix"
     ]
   },
   "jest": {

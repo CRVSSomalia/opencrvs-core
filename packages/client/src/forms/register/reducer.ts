@@ -8,12 +8,11 @@
  *
  * Copyright (C) The OpenCRVS Authors located at https://github.com/opencrvs/opencrvs-core/blob/master/AUTHORS.
  */
-import { LoopReducer, Loop } from 'redux-loop'
+import { LoopReducer, Loop, Cmd, loop } from 'redux-loop'
 import { IForm } from '@client/forms'
 import * as offlineActions from '@client/offline/actions'
-import { messages } from '@client/i18n/messages/views/review'
 import { deserializeForm } from '@client/forms/deserializer/deserializer'
-import { validators } from '@client/forms/validators'
+import { initValidators, validators } from '@client/forms/validators'
 
 export type IRegisterFormState =
   | {
@@ -47,23 +46,24 @@ export const registerFormReducer: LoopReducer<IRegisterFormState, Action> = (
   switch (action.type) {
     case offlineActions.READY:
     case offlineActions.FORMS_LOADED:
+      return loop(
+        state,
+        Cmd.run(
+          async () => {
+            await initValidators()
+            return action.payload
+          },
+          {
+            successActionCreator: offlineActions.CustomValidatorsSuccess
+          }
+        )
+      )
+    case offlineActions.CUSTOM_VALIDATORS_LOADED:
       const { forms } = action.payload
 
       const birth = deserializeForm(forms.birth, validators)
       const death = deserializeForm(forms.death, validators)
       const marriage = deserializeForm(forms.marriage, validators)
-
-      const preview = {
-        viewType: 'preview' as const,
-        name: messages.previewName,
-        title: messages.previewTitle,
-        groups: [
-          {
-            id: 'preview-view-group',
-            fields: []
-          }
-        ]
-      }
 
       return {
         ...state,
@@ -71,15 +71,27 @@ export const registerFormReducer: LoopReducer<IRegisterFormState, Action> = (
         registerForm: {
           birth: {
             ...birth,
-            sections: [...birth.sections, { ...preview, id: 'preview' }]
+            sections: [
+              ...birth.sections.filter(({ viewType }) =>
+                ['form', 'hidden', 'preview'].includes(viewType)
+              )
+            ]
           },
           death: {
             ...death,
-            sections: [...death.sections, { ...preview, id: 'preview' }]
+            sections: [
+              ...death.sections.filter(({ viewType }) =>
+                ['form', 'hidden', 'preview'].includes(viewType)
+              )
+            ]
           },
           marriage: {
             ...marriage,
-            sections: [...marriage.sections, { ...preview, id: 'preview' }]
+            sections: [
+              ...marriage.sections.filter(({ viewType }) =>
+                ['form', 'hidden', 'preview'].includes(viewType)
+              )
+            ]
           }
         }
       }

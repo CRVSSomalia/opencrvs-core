@@ -30,9 +30,11 @@ import {
   getQueryData,
   getVisibleOptions,
   getListOfLocations,
-  getFieldHelperText
+  getFieldHelperText,
+  getDependentFields,
+  evalExpressionInFieldDefinition,
+  handleInitialValue
 } from '@client/forms/utils'
-
 import styled, { keyframes } from 'styled-components'
 import { gqlToDraftTransformer } from '@client/transformer'
 import {
@@ -55,11 +57,9 @@ import {
   IFormSectionData,
   Ii18nFormField,
   INFORMATIVE_RADIO_GROUP,
-  ISelectFormFieldWithDynamicOptions,
   ISelectFormFieldWithOptions,
   ITextFormField,
   Ii18nTextFormField,
-  Ii18nNumberFormField,
   LINK,
   BULLET_LIST,
   NUMBER,
@@ -78,7 +78,6 @@ import {
   RADIO_GROUP_WITH_NESTED_FIELDS,
   Ii18nRadioGroupWithNestedFieldsFormField,
   LOCATION_SEARCH_INPUT,
-  Ii18nTextareaFormField,
   TEXT,
   DATE_RANGE_PICKER,
   IDateRangePickerValue,
@@ -88,14 +87,22 @@ import {
   DIVIDER,
   HEADING3,
   SUBSECTION_HEADER,
-  HIDDEN
+  HIDDEN,
+  SIGNATURE,
+  BUTTON,
+  HTTP,
+  InitialValue,
+  DependencyInfo,
+  Ii18nButtonFormField,
+  REDIRECT,
+  IDocumentUploaderWithOptionsFormField
 } from '@client/forms'
 import { getValidationErrorsForForm, Errors } from '@client/forms/validation'
 import { InputField } from '@client/components/form/InputField'
 import { FetchButtonField } from '@client/components/form/FetchButton'
 
 import { InformativeRadioGroup } from '@client/views/PrintCertificate/InformativeRadioGroup'
-import { DocumentUploaderWithOption } from './DocumentUploadfield/DocumentUploaderWithOption'
+import { DocumentUploaderWithOption } from './DocumentUploadField/DocumentUploaderWithOption'
 import {
   WrappedComponentProps as IntlShapeProps,
   MessageDescriptor,
@@ -111,8 +118,8 @@ import {
   Formik
 } from 'formik'
 import { IOfflineData, LocationType } from '@client/offline/reducer'
-import { isEqual, flatten } from 'lodash'
-import { SimpleDocumentUploader } from './DocumentUploadfield/SimpleDocumentUploader'
+import { isEqual, flatten, cloneDeep, set } from 'lodash'
+import { SimpleDocumentUploader } from './DocumentUploadField/SimpleDocumentUploader'
 import { getOfflineData } from '@client/offline/selectors'
 import { dynamicDispatch } from '@client/declarations'
 import { useDispatch, useSelector } from 'react-redux'
@@ -128,9 +135,15 @@ import { UserDetails } from '@client/utils/userUtils'
 import { VerificationButton } from '@opencrvs/components/lib/VerificationButton'
 import { useOnlineStatus } from '@client/utils'
 import { useNidAuthentication } from '@client/views/OIDPVerificationCallback/utils'
-import { BulletList, Divider } from '@opencrvs/components'
+import { BulletList, Divider, InputLabel, Stack } from '@opencrvs/components'
 import { Heading2, Heading3 } from '@opencrvs/components/lib/Headings/Headings'
+import { SignatureUploader } from './SignatureField/SignatureUploader'
+import { ButtonField } from '@client/components/form/Button'
+import { RedirectField } from '@client/components/form/Redirect'
 
+const SignatureField = styled(Stack)`
+  margin-top: 8px;
+`
 const fadeIn = keyframes`
   from { opacity: 0; }
   to { opacity: 1; }
@@ -141,13 +154,7 @@ const FormItem = styled.div<{
 }>`
   animation: ${fadeIn} 500ms;
   margin-bottom: ${({ ignoreBottomMargin }) =>
-    ignoreBottomMargin ? '0px' : '28px'};
-`
-
-const LocationSearchFormField = styled(LocationSearch)`
-  ${({ theme }) => `@media (min-width: ${theme.grid.breakpoints.md}px) {
-    width: 344px;
-  }`}
+    ignoreBottomMargin ? '0px' : '22px'};
 `
 
 function handleSelectFocus(id: string, isSearchable: boolean) {
@@ -166,7 +173,10 @@ function handleSelectFocus(id: string, isSearchable: boolean) {
 
 type GeneratedInputFieldProps = {
   fieldDefinition: Ii18nFormField
-  onSetFieldValue: (name: string, value: IFormFieldValue) => void
+  fields: IFormField[]
+  values: IFormSectionData
+  setFieldValue: (name: string, value: IFormFieldValue) => void
+  onClick?: () => void
   onChange: (e: React.ChangeEvent<any>) => void
   onBlur: (e: React.FocusEvent<any>) => void
   resetDependentSelectValues: (name: string) => void
@@ -175,11 +185,11 @@ type GeneratedInputFieldProps = {
   value: IFormFieldValue
   touched: boolean
   error: string
-  draftData?: IFormData
+  draftData: IFormData
   disabled?: boolean
   onUploadingStateChanged?: (isUploading: boolean) => void
   requiredErrorMessage?: MessageDescriptor
-  setFieldTouched?: (name: string, isTouched?: boolean) => void
+  setFieldTouched: (name: string, isTouched?: boolean) => void
 } & Omit<IDispatchProps, 'writeDeclaration'>
 
 const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
@@ -187,7 +197,7 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
     fieldDefinition,
     onChange,
     onBlur,
-    onSetFieldValue,
+    setFieldValue,
     resetDependentSelectValues,
     resetNestedInputValues,
     error,
@@ -199,7 +209,9 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
     dynamicDispatch,
     onUploadingStateChanged,
     setFieldTouched,
-    requiredErrorMessage
+    requiredErrorMessage,
+    fields,
+    values
   }) => {
     const inputFieldProps = {
       id: fieldDefinition.name,
@@ -215,15 +227,13 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
       hideAsterisk: fieldDefinition.hideAsterisk,
       hideInputHeader: fieldDefinition.hideHeader,
       error,
-      touched,
-      mode: fieldDefinition.mode,
-      ignoreMediaQuery: fieldDefinition.ignoreMediaQuery
+      touched
     }
 
     const intl = useIntl()
     const onChangeGroupInput = React.useCallback(
-      (val: string) => onSetFieldValue(fieldDefinition.name, val),
-      [fieldDefinition.name, onSetFieldValue]
+      (val: string) => setFieldValue(fieldDefinition.name, val),
+      [fieldDefinition.name, setFieldValue]
     )
     const isOnline = useOnlineStatus()
 
@@ -235,8 +245,7 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
       disabled: fieldDefinition.disabled ?? disabled,
       error: Boolean(error),
       touched: Boolean(touched),
-      placeholder: fieldDefinition.placeholder,
-      ignoreMediaQuery: fieldDefinition.ignoreMediaQuery
+      placeholder: fieldDefinition.placeholder
     }
     if (fieldDefinition.type === SELECT_WITH_OPTIONS) {
       return (
@@ -246,8 +255,8 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
             isDisabled={fieldDefinition.disabled}
             value={value as string}
             onChange={(val: string) => {
+              setFieldValue(fieldDefinition.name, val)
               resetDependentSelectValues(fieldDefinition.name)
-              onSetFieldValue(fieldDefinition.name, val)
             }}
             onFocus={() =>
               handleSelectFocus(
@@ -262,24 +271,24 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
     }
     if (fieldDefinition.type === DOCUMENT_UPLOADER_WITH_OPTION) {
       return (
-        <DocumentUploaderWithOption
-          {...inputProps}
-          name={fieldDefinition.name}
-          label={fieldDefinition.label}
-          options={fieldDefinition.options}
-          splitView={fieldDefinition.splitView}
-          files={value as IFileValue[]}
-          extraValue={fieldDefinition.extraValue || ''}
-          compressImagesToSizeMB={fieldDefinition.compressImagesToSizeMB}
-          maxSizeMB={fieldDefinition.maxSizeMB}
-          hideOnEmptyOption={fieldDefinition.hideOnEmptyOption}
-          onComplete={(files: IFileValue[]) => {
-            onSetFieldValue(fieldDefinition.name, files)
-            setFieldTouched && setFieldTouched(fieldDefinition.name, true)
-          }}
-          onUploadingStateChanged={onUploadingStateChanged}
-          requiredErrorMessage={requiredErrorMessage}
-        />
+        <InputField {...inputFieldProps}>
+          <DocumentUploaderWithOption
+            {...inputProps}
+            name={fieldDefinition.name}
+            options={fieldDefinition.options}
+            files={value as IFileValue[]}
+            extraValue={fieldDefinition.extraValue || ''}
+            hideOnEmptyOption={fieldDefinition.hideOnEmptyOption}
+            onComplete={(files: IFileValue[]) => {
+              setFieldValue(fieldDefinition.name, files)
+              setFieldTouched && setFieldTouched(fieldDefinition.name, true)
+            }}
+            compressImagesToSizeMB={fieldDefinition.compressImagesToSizeMB}
+            maxSizeMB={fieldDefinition.maxSizeMB}
+            onUploadingStateChanged={onUploadingStateChanged}
+            requiredErrorMessage={requiredErrorMessage}
+          />
+        </InputField>
       )
     }
     if (fieldDefinition.type === SIMPLE_DOCUMENT_UPLOADER) {
@@ -294,7 +303,7 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
           error={error}
           onComplete={(file) => {
             setFieldTouched && setFieldTouched(fieldDefinition.name, true)
-            onSetFieldValue(fieldDefinition.name, file)
+            setFieldValue(fieldDefinition.name, file)
           }}
           onUploadingStateChanged={onUploadingStateChanged}
           requiredErrorMessage={requiredErrorMessage}
@@ -309,7 +318,7 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
             size={fieldDefinition.size}
             onChange={(val: string) => {
               resetDependentSelectValues(fieldDefinition.name)
-              onSetFieldValue(fieldDefinition.name, val)
+              setFieldValue(fieldDefinition.name, val)
             }}
             options={fieldDefinition.options}
             name={fieldDefinition.name}
@@ -336,8 +345,8 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
             {...inputProps}
             size={RadioSize.LARGE}
             onChange={(val: string) => {
+              setFieldValue(`${fieldDefinition.name}.value`, val)
               resetNestedInputValues(fieldDefinition)
-              onSetFieldValue(`${fieldDefinition.name}.value`, val)
             }}
             nestedFields={nestedFields}
             options={visibleRadioOptions}
@@ -354,7 +363,7 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
         <InformativeRadioGroup
           inputProps={inputProps}
           value={value as string}
-          onSetFieldValue={onSetFieldValue}
+          onSetFieldValue={setFieldValue}
           fieldDefinition={fieldDefinition}
           inputFieldProps={inputFieldProps}
         />
@@ -370,7 +379,7 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
             name={fieldDefinition.name}
             value={value as string[]}
             onChange={(val: string[]) =>
-              onSetFieldValue(fieldDefinition.name, val)
+              setFieldValue(fieldDefinition.name, val)
             }
           />
         </InputField>
@@ -388,7 +397,7 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
             value={String(value)}
             selected={(value as string) === checkedValue}
             onChange={(event: { target: { value: string } }) =>
-              onSetFieldValue(
+              setFieldValue(
                 fieldDefinition.name,
                 event.target.value === String(checkedValue)
                   ? uncheckedValue
@@ -407,9 +416,7 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
             {...inputProps}
             notice={fieldDefinition.notice}
             ignorePlaceHolder={fieldDefinition.ignorePlaceHolder}
-            onChange={(val: string) =>
-              onSetFieldValue(fieldDefinition.name, val)
-            }
+            onChange={(val: string) => setFieldValue(fieldDefinition.name, val)}
             value={value as string}
           />
         </InputField>
@@ -435,7 +442,7 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
             notice={fieldDefinition.notice}
             ignorePlaceHolder={fieldDefinition.ignorePlaceHolder}
             onChange={(val: IDateRangePickerValue) =>
-              onSetFieldValue(fieldDefinition.name, val)
+              setFieldValue(fieldDefinition.name, val)
             }
             value={value as IDateRangePickerValue}
           />
@@ -446,9 +453,9 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
       return (
         <InputField {...inputFieldProps}>
           <TextArea
-            maxLength={(fieldDefinition as Ii18nTextareaFormField).maxLength}
             {...inputProps}
-            value={inputProps.value as string}
+            maxLength={fieldDefinition.maxLength}
+            value={value.toString()}
           />
         </InputField>
       )
@@ -508,10 +515,6 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
       )
     }
     if (fieldDefinition.type === NUMBER) {
-      let inputFieldWidth = fieldDefinition.inputFieldWidth
-      if (fieldDefinition?.inputWidth) {
-        inputFieldWidth = fieldDefinition.inputWidth + 'px'
-      }
       return (
         <InputField {...inputFieldProps}>
           <TextInput
@@ -523,18 +526,16 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
               if (e.key.match(REGEXP_NUMBER_INPUT_NON_NUMERIC)) {
                 e.preventDefault()
               }
-              const maxLength = (fieldDefinition as Ii18nNumberFormField)
-                .maxLength
+              const maxLength = fieldDefinition.maxLength
               if (maxLength && e.currentTarget.value.length >= maxLength) {
                 e.preventDefault()
               }
             }}
             value={inputProps.value as string}
-            maxLength={(fieldDefinition as Ii18nNumberFormField).maxLength}
+            maxLength={fieldDefinition.maxLength}
             onWheel={(event: React.WheelEvent<HTMLInputElement>) => {
               event.currentTarget.blur()
             }}
-            inputFieldWidth={inputFieldWidth}
           />
         </InputField>
       )
@@ -564,7 +565,7 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
       return (
         <Link
           type="reg16"
-          onClick={() => onSetFieldValue(fieldDefinition.name, true)}
+          onClick={() => setFieldValue(fieldDefinition.name, true)}
         >
           {fieldDefinition.label}
         </Link>
@@ -581,13 +582,13 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
 
       return (
         <InputField {...inputFieldProps}>
-          <LocationSearchFormField
+          <LocationSearch
             buttonLabel={intl.formatMessage(buttonMessages.search)}
             {...inputProps}
             selectedLocation={selectedLocation}
             locationList={fieldDefinition.locationList}
             searchHandler={(item) => {
-              onSetFieldValue(fieldDefinition.name, item.id)
+              setFieldValue(fieldDefinition.name, item.id)
               if (fieldDefinition.dispatchOptions) {
                 dynamicDispatch(fieldDefinition.dispatchOptions.action, {
                   [fieldDefinition.dispatchOptions.payloadKey]: item.id
@@ -629,9 +630,18 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
       )
     }
 
+    if (fieldDefinition.type === REDIRECT) {
+      return (
+        <RedirectField
+          to={fieldDefinition.options.url}
+          form={values}
+          draft={draftData}
+        />
+      )
+    }
+
     if (fieldDefinition.type === HIDDEN) {
-      const { error, touched, ignoreMediaQuery, ...allowedInputProps } =
-        inputProps
+      const { error, touched, ...allowedInputProps } = inputProps
 
       return (
         <input
@@ -641,6 +651,58 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
         />
       )
     }
+    if (fieldDefinition.type === SIGNATURE) {
+      const {
+        name,
+        helperText,
+        required,
+        label,
+        maxSizeMb,
+        allowedFileFormats
+      } = fieldDefinition
+      return (
+        <SignatureField direction="column" gap={8} alignItems="start">
+          <InputLabel
+            {...inputFieldProps}
+            htmlFor={name}
+            inputDescriptor={helperText}
+          >
+            {label}
+          </InputLabel>
+          <SignatureUploader
+            {...inputProps}
+            name={name}
+            modalTitle={label}
+            value={value as string}
+            maxSizeMb={maxSizeMb}
+            allowedFileFormats={allowedFileFormats}
+            required={required}
+            onChange={(sig) => setFieldValue(name, sig)}
+          />
+        </SignatureField>
+      )
+    }
+
+    if (fieldDefinition.type === HTTP) {
+      return null
+    }
+
+    if (fieldDefinition.type === BUTTON) {
+      return (
+        <InputField {...inputFieldProps}>
+          <ButtonField
+            fields={fields}
+            fieldDefinition={fieldDefinition as Ii18nButtonFormField}
+            values={values}
+            draftData={draftData}
+            setFieldValue={setFieldValue}
+            disabled={disabled}
+            setFieldTouched={setFieldTouched}
+          />
+        </InputField>
+      )
+    }
+
     return (
       <InputField {...inputFieldProps}>
         <TextInput
@@ -676,12 +738,15 @@ const GeneratedInputField = React.memo<GeneratedInputFieldProps>(
 
 GeneratedInputField.displayName = 'MemoizedGeneratedInputField'
 
-const mapFieldsToValues = (
+export const mapFieldsToValues = (
   fields: IFormField[],
-  userDetails: UserDetails | null
+  ...evalParams: [IFormSectionData, IOfflineData, IFormData, UserDetails | null]
 ) =>
   fields.reduce((memo, field) => {
-    let fieldInitialValue = field.initialValue as IFormFieldValue
+    let fieldInitialValue = handleInitialValue(
+      field.initialValue as InitialValue,
+      ...evalParams
+    )
 
     if (field.type === RADIO_GROUP_WITH_NESTED_FIELDS && !field.initialValue) {
       const nestedFieldsFlatted = flatten(Object.values(field.nestedFields))
@@ -689,13 +754,19 @@ const mapFieldsToValues = (
       const nestedInitialValues = nestedFieldsFlatted.reduce(
         (nestedValues, nestedField) => ({
           ...nestedValues,
-          [nestedField.name]: nestedField.initialValue
+          [nestedField.name]: handleInitialValue(
+            nestedField.initialValue as InitialValue,
+            ...evalParams
+          )
         }),
         {}
       )
 
       fieldInitialValue = {
-        value: field.initialValue as IFormFieldValue,
+        value: handleInitialValue(
+          field.initialValue as InitialValue,
+          ...evalParams
+        ),
         nestedFields: nestedInitialValues
       }
     }
@@ -710,7 +781,7 @@ interface IFormSectionProps {
   fieldsToShowValidationErrors?: IFormField[]
   setAllFieldsDirty: boolean
   onChange: (values: IFormSectionData) => void
-  draftData?: IFormData
+  draftData: IFormData
   onSetTouched?: (func: ISetTouchedFunction) => void
   requiredErrorMessage?: MessageDescriptor
   onUploadingStateChanged?: (isUploading: boolean) => void
@@ -823,6 +894,30 @@ class FormSectionComponent extends React.Component<Props> {
     this.props.setFieldTouched(e.target.name)
   }
 
+  setFieldValuesWithDependency = (
+    fieldName: string,
+    value: IFormFieldValue
+  ) => {
+    const updatedValues = cloneDeep(this.props.values)
+    set(updatedValues, fieldName, value)
+    const updateDependentFields = (fieldName: string) => {
+      const dependentFields = getDependentFields(this.props.fields, fieldName)
+      for (const field of dependentFields) {
+        updatedValues[field.name] = evalExpressionInFieldDefinition(
+          (field.initialValue as DependencyInfo).expression,
+          updatedValues,
+          this.props.offlineCountryConfig,
+          this.props.draftData,
+          this.props.userDetails
+        )
+        updateDependentFields(field.name)
+      }
+    }
+    updateDependentFields(fieldName)
+
+    this.props.setValues(updatedValues)
+  }
+
   resetDependentSelectValues = (fieldName: string) => {
     const fields = this.props.fields
     const fieldsToReset = fields.filter(
@@ -858,7 +953,6 @@ class FormSectionComponent extends React.Component<Props> {
     const {
       values,
       fields,
-      setFieldValue,
       setFieldTouched,
       touched,
       offlineCountryConfig,
@@ -930,28 +1024,28 @@ class FormSectionComponent extends React.Component<Props> {
           }
 
           const withDynamicallyGeneratedFields =
-            field.type === SELECT_WITH_OPTIONS
+            field.type === SELECT_WITH_OPTIONS ||
+            field.type === SELECT_WITH_DYNAMIC_OPTIONS
               ? ({
                   ...field,
                   type: SELECT_WITH_OPTIONS,
                   options: getFieldOptions(
-                    field as ISelectFormFieldWithOptions,
+                    field,
                     values,
                     offlineCountryConfig,
                     draftData
                   )
-                } as ISelectFormFieldWithOptions)
-              : field.type === SELECT_WITH_DYNAMIC_OPTIONS
+                } satisfies ISelectFormFieldWithOptions)
+              : field.type === DOCUMENT_UPLOADER_WITH_OPTION
               ? ({
                   ...field,
-                  type: SELECT_WITH_OPTIONS,
                   options: getFieldOptions(
-                    field as ISelectFormFieldWithDynamicOptions,
+                    field,
                     values,
                     offlineCountryConfig,
                     draftData
                   )
-                } as ISelectFormFieldWithOptions)
+                } satisfies IDocumentUploaderWithOptionsFormField)
               : field.type === FIELD_WITH_DYNAMIC_DEFINITIONS
               ? ({
                   ...field,
@@ -1037,7 +1131,8 @@ class FormSectionComponent extends React.Component<Props> {
             field.type === FETCH_BUTTON ||
             field.type === FIELD_WITH_DYNAMIC_DEFINITIONS ||
             field.type === SELECT_WITH_DYNAMIC_OPTIONS ||
-            field.type === NID_VERIFICATION_BUTTON
+            field.type === NID_VERIFICATION_BUTTON ||
+            field.type === BUTTON
           ) {
             return (
               <FormItem
@@ -1051,13 +1146,16 @@ class FormSectionComponent extends React.Component<Props> {
                         intl,
                         withDynamicallyGeneratedFields
                       )}
-                      onSetFieldValue={setFieldValue}
+                      setFieldValue={this.setFieldValuesWithDependency}
+                      setFieldTouched={setFieldTouched}
                       resetDependentSelectValues={
                         this.resetDependentSelectValues
                       }
                       {...formikFieldProps.field}
                       touched={touched[field.name] || false}
                       error={error}
+                      fields={fields}
+                      values={values}
                       draftData={draftData}
                       disabled={isFieldDisabled}
                       dynamicDispatch={dynamicDispatch}
@@ -1109,12 +1207,14 @@ class FormSectionComponent extends React.Component<Props> {
                               ...nestedField,
                               name: nestedFieldName
                             })}
-                            onSetFieldValue={setFieldValue}
+                            setFieldValue={this.setFieldValuesWithDependency}
                             setFieldTouched={setFieldTouched}
                             resetDependentSelectValues={
                               this.resetDependentSelectValues
                             }
                             {...formikFieldProps.field}
+                            fields={fields}
+                            values={values}
                             touched={nestedFieldTouched || false}
                             error={nestedError}
                             draftData={draftData}
@@ -1144,7 +1244,8 @@ class FormSectionComponent extends React.Component<Props> {
                         intl,
                         withDynamicallyGeneratedFields
                       )}
-                      onSetFieldValue={setFieldValue}
+                      setFieldValue={this.setFieldValuesWithDependency}
+                      setFieldTouched={setFieldTouched}
                       resetDependentSelectValues={
                         this.resetDependentSelectValues
                       }
@@ -1153,6 +1254,8 @@ class FormSectionComponent extends React.Component<Props> {
                       nestedFields={nestedFieldElements}
                       touched={Boolean(touched[field.name]) || false}
                       error={error}
+                      fields={fields}
+                      values={values}
                       draftData={draftData}
                       dynamicDispatch={dynamicDispatch}
                     />
@@ -1174,7 +1277,8 @@ class FormSectionComponent extends React.Component<Props> {
                           intl,
                           withDynamicallyGeneratedFields
                         )}
-                        onSetFieldValue={setFieldValue}
+                        setFieldValue={this.setFieldValuesWithDependency}
+                        setFieldTouched={setFieldTouched}
                         resetDependentSelectValues={
                           this.resetDependentSelectValues
                         }
@@ -1182,6 +1286,8 @@ class FormSectionComponent extends React.Component<Props> {
                         touched={touched[field.name] || false}
                         error={isFieldDisabled ? '' : error}
                         draftData={draftData}
+                        fields={fields}
+                        values={values}
                         dynamicDispatch={dynamicDispatch}
                         disabled={isFieldDisabled}
                         onUploadingStateChanged={
@@ -1210,7 +1316,14 @@ export const FormFieldGenerator: React.FC<IFormSectionProps> = (props) => {
   return (
     <Formik<IFormSectionData>
       initialValues={
-        props.initialValues ?? mapFieldsToValues(props.fields, userDetails)
+        props.initialValues ??
+        mapFieldsToValues(
+          props.fields,
+          {},
+          offlineCountryConfig,
+          props.draftData,
+          userDetails
+        )
       }
       onSubmit={() => {}}
       validate={(values) =>
@@ -1219,6 +1332,7 @@ export const FormFieldGenerator: React.FC<IFormSectionProps> = (props) => {
           values,
           offlineCountryConfig,
           props.draftData,
+          userDetails,
           props.requiredErrorMessage
         )
       }

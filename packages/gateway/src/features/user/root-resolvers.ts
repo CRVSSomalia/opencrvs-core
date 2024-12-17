@@ -20,7 +20,8 @@ import {
   hasScope,
   inScope,
   isTokenOwner,
-  getUserId
+  getUserId,
+  canAssignRole
 } from '@gateway/features/user/utils'
 import {
   GQLHumanNameInput,
@@ -29,15 +30,15 @@ import {
   GQLUserIdentifierInput,
   GQLUserInput
 } from '@gateway/graphql/schema'
-import { logger } from '@opencrvs/commons'
+import { logger, isBase64FileString } from '@opencrvs/commons'
 import { checkVerificationCode } from '@gateway/routes/verifyCode/handler'
 import { UserInputError } from 'apollo-server-hapi'
 import fetch from '@gateway/fetch'
 import { validateAttachments } from '@gateway/utils/validators'
 import { postMetrics } from '@gateway/features/metrics/service'
 import { uploadBase64ToMinio } from '@gateway/features/documents/service'
-import { isBase64FileString } from '@opencrvs/commons'
 import { rateLimitedResolver } from '@gateway/rate-limit'
+import { getTokenPayload } from '@opencrvs/commons/authentication'
 
 export const resolvers: GQLResolver = {
   Query: {
@@ -271,6 +272,14 @@ export const resolvers: GQLResolver = {
         return await Promise.reject(
           new Error('Create user is only allowed for sysadmin')
         )
+      }
+
+      const { scope: loggedInUserScope } = getTokenPayload(
+        authHeader.Authorization.split(' ')[1]
+      )
+
+      if (!canAssignRole(loggedInUserScope, user)) {
+        throw Error('Create user is only allowed for sysadmin/natlsysadmin')
       }
 
       try {

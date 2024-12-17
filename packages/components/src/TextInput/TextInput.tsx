@@ -15,57 +15,76 @@ export interface ICustomProps {
   error?: boolean
   touched?: boolean
   focusInput?: boolean
-  ignoreMediaQuery?: boolean
-  hideBorder?: boolean
+  hideBorder?: boolean // Deprecated
   autocomplete?: boolean
-  isSmallSized?: boolean
+  isSmallSized?: boolean // Deprecated
   isDisabled?: boolean
-  inputFieldWidth?: string
+  hasPrefix?: boolean
+  hasPostfix?: boolean
+  prefix?: React.ReactNode | string
+  postfix?: React.ReactNode | string
+  unit?: React.ReactNode | string
 }
 
 export type ITextInputProps = ICustomProps &
   React.InputHTMLAttributes<HTMLInputElement>
 
-const StyledInput = styled.input<ITextInputProps>`
-  ${({ inputFieldWidth }) =>
-    inputFieldWidth ? `width: ${inputFieldWidth}` : `width: 100%`};
-  padding: 8px 10px;
-  height: 40px;
+const StyledInputContainer = styled.div<{
+  touched?: boolean
+  disabled?: boolean
+  error?: boolean
+}>`
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0 16px;
   border-radius: 4px;
   transition: border-color 500ms ease-out;
   box-sizing: border-box;
+  overflow: hidden;
+
+  ${({ error, touched, disabled, theme }) => `
+    border: 1.5px solid ${
+      error && touched
+        ? theme.colors.negative
+        : disabled
+        ? theme.colors.grey300
+        : theme.colors.copy
+    };
+    &:hover {
+      box-shadow: 0 0 0 4px ${theme.colors.grey200};
+    }
+    &:focus-within {
+      outline: 0.5px solid ${theme.colors.grey600};
+      border: 1.5px solid ${theme.colors.grey600};
+      box-shadow: 0 0 0px 4px ${theme.colors.yellow};
+    }
+  `}
+`
+
+const StyledPrefix = styled.span`
+  ${({ theme }) => theme.fonts.reg19};
+  color: ${({ theme }) => theme.colors.grey400};
+  user-select: none;
+`
+
+const StyledPostfix = styled.span`
+  ${({ theme }) => theme.fonts.reg19};
+  color: ${({ theme }) => theme.colors.grey400};
+  user-select: none;
+`
+
+const StyledInput = styled.input<ICustomProps>`
+  width: 100%;
+  padding-left: ${({ hasPrefix }) => (hasPrefix ? '8px' : '0')};
+  padding-right: ${({ hasPostfix }) => (hasPostfix ? '4px' : '0')};
+  height: 46px;
   outline: none;
-  ${({ theme }) => theme.fonts.reg18};
+  border: none;
+  ${({ theme }) => theme.fonts.reg19};
   color: ${({ theme }) => theme.colors.copy};
   background: ${({ theme }) => theme.colors.white};
-
-  ${({ hideBorder, error, touched, disabled, theme }) =>
-    hideBorder
-      ? `
-      border:none;
-      ${
-        error && touched
-          ? `box-shadow: 0 0 0px 2px ${theme.colors.negative};`
-          : 'box-shadow: none;'
-      }
-      &:focus {
-        box-shadow: 0 0 0px 2px ${
-          error && touched ? theme.colors.negative : theme.colors.yellow
-        };
-      }
-        `
-      : `
-      border: 2px solid ${
-        error && touched
-          ? theme.colors.negative
-          : disabled
-          ? theme.colors.grey300
-          : theme.colors.copy
-      };
-      &:focus {
-        box-shadow: 0 0 0px 3px ${theme.colors.yellow};
-      }
-      `}
 
   &::-webkit-input-placeholder {
     color: ${({ theme }) => theme.colors.placeholderCopy};
@@ -91,18 +110,6 @@ const StyledInput = styled.input<ITextInputProps>`
     padding: 0;
     text-align: center;
   }
-
-  ${({ ignoreMediaQuery, isSmallSized, theme, inputFieldWidth }) => {
-    return !ignoreMediaQuery && !inputFieldWidth
-      ? isSmallSized
-        ? `@media (min-width: ${theme.grid.breakpoints.md}px) {
-        width: 344px;
-      }`
-        : `@media (min-width: ${theme.grid.breakpoints.md}px) {
-        width: 344px;
-      }`
-      : ''
-  }}
 `
 
 export interface IRef {
@@ -115,9 +122,10 @@ export const TextInput = React.forwardRef<IRef, ITextInputProps>(
       focusInput,
       maxLength = 250,
       isDisabled,
-      inputFieldWidth,
-      ignoreMediaQuery,
       error,
+      postfix,
+      prefix,
+      unit,
       ...otherProps
     },
     ref
@@ -148,15 +156,28 @@ export const TextInput = React.forwardRef<IRef, ITextInputProps>(
     }, [focusInput])
 
     return (
-      <StyledInput
-        ref={$element}
-        name={otherProps.id}
-        {...otherProps}
-        autoComplete={process.env.NODE_ENV === 'production' ? 'off' : undefined}
-        maxLength={maxLength}
+      <StyledInputContainer
+        touched={otherProps.touched}
         disabled={isDisabled}
-        inputFieldWidth={inputFieldWidth}
-      />
+        error={error}
+      >
+        {prefix && <StyledPrefix>{prefix}</StyledPrefix>}
+        <StyledInput
+          ref={$element}
+          name={otherProps.id}
+          {...otherProps}
+          autoComplete={
+            process.env.NODE_ENV === 'production' ? 'off' : undefined
+          }
+          maxLength={maxLength}
+          disabled={isDisabled}
+          error={error}
+          hasPrefix={!!prefix}
+          hasPostfix={!!postfix}
+        />
+        {postfix && <StyledPostfix>{postfix}</StyledPostfix>}
+        {unit && <StyledPostfix>{unit}</StyledPostfix>}
+      </StyledInputContainer>
     )
   }
 )

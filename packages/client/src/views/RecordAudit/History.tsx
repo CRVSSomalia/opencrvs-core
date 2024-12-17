@@ -40,7 +40,7 @@ import { useSelector } from 'react-redux'
 import { formatLongDate } from '@client/utils/date-formatting'
 import { getLocalizedLocationName } from '@client/utils/locationUtils'
 import { ILocation } from '@client/offline/reducer'
-import { getUserRole } from '@client/views/SysAdmin/Config/UserRoles/utils'
+import { getUserRole } from '@client/utils'
 
 const TableDiv = styled.div`
   overflow: auto;

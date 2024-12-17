@@ -21,10 +21,10 @@ import {
   LAST_OFFICE_EXTENSION_URL,
   resourceIdentifierToUUID,
   findResourceFromBundleById,
+  SavedOffice,
   SavedPractitioner,
   SavedBundle
 } from './fhir'
-import { SavedOffice } from './fhir/location'
 
 export const findAssignment = <T extends SavedBundle>(bundle: T) => {
   const task = getTaskFromSavedBundle(bundle)

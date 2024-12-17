@@ -16,6 +16,7 @@ export {
   ArrowLeft,
   ArrowRight,
   Buildings,
+  Circle,
   CaretDown,
   CaretLeft,
   CaretRight,
@@ -34,6 +35,7 @@ export {
   MagnifyingGlassPlus,
   Export,
   Eye,
+  EyeSlash,
   Envelope,
   Gear,
   GitBranch,
@@ -57,7 +59,7 @@ export {
   Star,
   Target,
   TextT,
-  TrashSimple,
+  Trash,
   UploadSimple,
   User,
   UserPlus,
@@ -65,6 +67,7 @@ export {
   WarningCircle,
   X,
   CircleWavyCheck,
-  CircleWavyQuestion
+  CircleWavyQuestion,
+  UserCircle
 } from 'phosphor-react'
 export * from './custom-icons'

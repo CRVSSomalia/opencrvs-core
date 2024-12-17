@@ -39,7 +39,8 @@ describe('signature upload tests', () => {
 
   beforeEach(async () => {
     ;(roleQueries.fetchRoles as Mock).mockReturnValue(mockRoles)
-    await store.dispatch(offlineDataReady(mockOfflineDataDispatch))
+    store.dispatch(offlineDataReady(mockOfflineDataDispatch))
+    await flushPromises()
   })
 
   describe('when user is in signature upload form page', () => {
@@ -79,8 +80,7 @@ describe('signature upload tests', () => {
       })
       testComponent.update()
       testComponent
-        .find('#image_file_uploader_field')
-        .hostNodes()
+        .find('input[name="signature"][type="file"]')
         .simulate('change', {
           target: {
             files: []
@@ -98,8 +98,7 @@ describe('signature upload tests', () => {
       })
       testComponent.update()
       testComponent
-        .find('#image_file_uploader_field')
-        .hostNodes()
+        .find('input[name="signature"][type="file"]')
         .simulate('change', {
           target: {
             files: [

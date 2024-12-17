@@ -8,7 +8,7 @@
  *
  * Copyright (C) The OpenCRVS Authors located at https://github.com/opencrvs/opencrvs-core/blob/master/AUTHORS.
  */
-import { Content } from '@opencrvs/components/lib'
+import { Content, ContentSize } from '@opencrvs/components/lib'
 import {
   ICertificate,
   IPrintableDeclaration,
@@ -18,10 +18,10 @@ import { IFormField } from '@client/forms'
 import React from 'react'
 import { buttonMessages } from '@client/i18n/messages'
 import { useIntl } from 'react-intl'
-import { PrimaryButton } from '@opencrvs/components/lib/buttons/PrimaryButton'
+import { Button } from '@opencrvs/components/lib/Button'
 import { groupHasError } from '@client/views/CorrectionForm/utils'
 import { FormFieldGenerator } from '@client/components/form'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { formatUrl, goToIssueCertificatePayment } from '@client/navigation'
 import { replaceInitialValues } from '@client/views/RegisterForm/RegisterForm'
 import { issueMessages } from '@client/i18n/messages/issueCertificate'
@@ -34,6 +34,8 @@ import { Event } from '@client/utils/gateway'
 import { Redirect } from 'react-router'
 import { REGISTRAR_HOME_TAB } from '@client/navigation/routes'
 import { WORKQUEUE_TABS } from '@client/components/interface/Navigation'
+import { getOfflineData } from '@client/offline/selectors'
+import { getUserDetails } from '@client/profile/profileSelectors'
 
 function collectorFormFieldsForOthers(event: Event) {
   const collectCertFormSection =
@@ -55,6 +57,8 @@ export const IssueCollectorFormForOthers = ({
 }) => {
   const intl = useIntl()
   const dispatch = useDispatch()
+  const config = useSelector(getOfflineData)
+  const user = useSelector(getUserDetails)
 
   const fields: IFormField[] = collectorFormFieldsForOthers(declaration.event)
   const handleChange = (
@@ -103,18 +107,25 @@ export const IssueCollectorFormForOthers = ({
   return (
     <Content
       title={intl.formatMessage(issueMessages.collectorDetails)}
+      size={ContentSize.SMALL}
       bottomActionButtons={[
-        <PrimaryButton
+        <Button
           key="continue-button"
           id="continue-button"
+          type="primary"
+          size="large"
+          fullWidth
           onClick={continueButtonHandler}
           disabled={groupHasError(
             { id: 'otherCollector', fields },
-            declaration.data.registration.certificates?.[0]?.collector ?? {}
+            declaration.data.registration.certificates?.[0]?.collector ?? {},
+            config,
+            declaration.data,
+            user
           )}
         >
           {intl.formatMessage(buttonMessages.continueButton)}
-        </PrimaryButton>
+        </Button>
       ]}
       showTitleOnMobile
     >
@@ -133,7 +144,9 @@ export const IssueCollectorFormForOthers = ({
               declaration.data.registration.certificates.length - 1
             ].collector) ||
             {},
-          declaration && declaration.data
+          declaration && declaration.data,
+          config,
+          user
         )}
         draftData={declaration.data}
       />

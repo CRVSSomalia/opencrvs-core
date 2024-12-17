@@ -6,22 +6,33 @@
 # & Healthcare Disclaimer located at http://opencrvs.org/license.
 #
 # Copyright (C) The OpenCRVS Authors located at https://github.com/opencrvs/opencrvs-core/blob/master/AUTHORS.
-version: '3.3'
-
 services:
+  base:
+    image: opencrvs/ocrvs-base:${VERSION}
+    #platform: linux/amd64
+    build:
+      context: .
+      dockerfile: ./packages/Dockerfile.base
+    deploy:
+      replicas: 0
   client:
     image: ecrvs/ocrvs-client:${VERSION}
     build:
       context: .
       dockerfile: ./packages/client/Dockerfile
     restart: unless-stopped
-
+    depends_on:
+      - base
+    environment:
+      - COUNTRY_CONFIG_URL_INTERNAL=http://countryconfig:3040
   dashboards:
     image: ecrvs/ocrvs-dashboards:${VERSION}
     build:
-      context: ./packages/dashboards
-      dockerfile: ./Dockerfile
+      context: .
+      dockerfile: ./packages/dashboards/Dockerfile
     restart: unless-stopped
+    depends_on:
+      - base
 
   components:
     image: ecrvs/ocrvs-components:${VERSION}
@@ -29,18 +40,26 @@ services:
       context: .
       dockerfile: ./packages/components/Dockerfile
     restart: unless-stopped
+    depends_on:
+      - base
   login:
     image: ecrvs/ocrvs-login:${VERSION}
     build:
       context: .
       dockerfile: ./packages/login/Dockerfile
     restart: unless-stopped
+    depends_on:
+      - base
+    environment:
+      - COUNTRY_CONFIG_URL_INTERNAL=http://countryconfig:3040
   gateway:
     image: ecrvs/ocrvs-gateway:${VERSION}
     build:
       context: .
       dockerfile: ./packages/gateway/Dockerfile
     restart: unless-stopped
+    depends_on:
+      - base
     environment:
       - REDIS_HOST=redis
       - CONFIG_SMS_CODE_EXPIRY_SECONDS=600
@@ -66,6 +85,8 @@ services:
       context: .
       dockerfile: ./packages/workflow/Dockerfile
     restart: unless-stopped
+    depends_on:
+      - base
     environment:
       - NODE_ENV=development
       - SEARCH_URL=http://search:9090/
@@ -84,18 +105,23 @@ services:
       context: .
       dockerfile: ./packages/search/Dockerfile
     restart: unless-stopped
+    depends_on:
+      - base
     environment:
       - HEARTH_MONGO_URL=mongodb://mongo1/hearth-dev
       - NODE_ENV=development
       - USER_MANAGEMENT_URL=http://user-mgnt:3030/
       - ES_HOST=elasticsearch:9200
       - FHIR_URL=http://hearth:3447/fhir
+      - APPLICATION_CONFIG_URL=http://config:2021/
   metrics:
     image: ecrvs/ocrvs-metrics:${VERSION}
     build:
       context: .
       dockerfile: ./packages/metrics/Dockerfile
     restart: unless-stopped
+    depends_on:
+      - base
     environment:
       - INFLUX_HOST=influxdb
       - INFLUX_PORT=8086
@@ -115,6 +141,8 @@ services:
     build:
       context: .
       dockerfile: ./packages/scheduler/Dockerfile
+    depends_on:
+      - base
     environment:
       - NODE_ENV=development
       - METRICS_URL=http://metrics:1050
@@ -125,6 +153,8 @@ services:
       context: .
       dockerfile: ./packages/auth/Dockerfile
     restart: unless-stopped
+    depends_on:
+      - base
     environment:
       - REDIS_HOST=redis
       - USER_MANAGEMENT_URL=http://user-mgnt:3030/
@@ -138,18 +168,23 @@ services:
       context: .
       dockerfile: ./packages/user-mgnt/Dockerfile
     restart: unless-stopped
+    depends_on:
+      - base
     environment:
       - MONGO_URL=mongodb://mongo1/user-mgnt
       - NOTIFICATION_SERVICE_URL=http://notification:2020/
       - HOST=0.0.0.0
       - METRICS_URL=http://metrics:1050
       - FHIR_URL=http://hearth:3447/fhir
+      - APPLICATION_CONFIG_URL=http://config:2021/
   webhooks:
     image: ecrvs/ocrvs-webhooks:${VERSION}
     build:
       context: .
       dockerfile: ./packages/webhooks/Dockerfile
     restart: unless-stopped
+    depends_on:
+      - base
     environment:
       - REDIS_HOST=redis
       - MONGO_URL=mongodb://mongo1/webhooks
@@ -164,6 +199,8 @@ services:
       context: .
       dockerfile: ./packages/notification/Dockerfile
     restart: unless-stopped
+    depends_on:
+      - base
     environment:
       - COUNTRY=${COUNTRY:-bgd}
       - HOST=0.0.0.0
@@ -174,6 +211,8 @@ services:
       context: .
       dockerfile: ./packages/config/Dockerfile
     restart: unless-stopped
+    depends_on:
+      - base
     environment:
       - AUTH_URL=http://auth:4040
       - COUNTRY_CONFIG_URL=http://countryconfig:3040
@@ -193,12 +232,15 @@ services:
       context: .
       dockerfile: ./packages/migration/Dockerfile
     restart: unless-stopped
+    depends_on:
+      - base
     environment:
       - USER_MGNT_MONGO_URL=mongodb://mongo1/user-mgnt
       - APPLICATION_CONFIG_MONGO_URL=mongodb://mongo1/application-config
       - HEARTH_MONGO_URL=mongodb://mongo1/hearth-dev
       - DASHBOARD_MONGO_URL=mongodb://mongo1/performance
       - OPENHIM_MONGO_URL=mongodb://mongo1/openhim-dev
+      - SEARCH_URL=http://search:9090/
       - ES_HOST=elasticsearch:9200
       - INFLUX_HOST=influxdb
       - INFLUX_PORT=8086
@@ -210,6 +252,8 @@ services:
       context: .
       dockerfile: ./packages/documents/Dockerfile
     restart: unless-stopped
+    depends_on:
+      - base
     environment:
       - NODE_ENV=development
       - COUNTRY_CONFIG_URL=http://countryconfig:3040

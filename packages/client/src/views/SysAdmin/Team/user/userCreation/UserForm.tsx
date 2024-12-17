@@ -36,7 +36,7 @@ import {
   ISystemRolesMap,
   modifyUserFormData
 } from '@client/user/userReducer'
-import { PrimaryButton } from '@opencrvs/components/lib/buttons'
+import { Button } from '@opencrvs/components/lib/Button'
 import { ActionPageLight } from '@opencrvs/components/lib/ActionPageLight'
 import { FormikTouched, FormikValues } from 'formik'
 import * as React from 'react'
@@ -45,8 +45,10 @@ import { connect } from 'react-redux'
 import { messages as sysAdminMessages } from '@client/i18n/messages/views/sysAdmin'
 import { IOfflineData } from '@client/offline/reducer'
 import { getOfflineData } from '@client/offline/selectors'
-import { Content } from '@opencrvs/components/lib/Content'
+import { Content, ContentSize } from '@opencrvs/components/lib/Content'
 import { selectSystemRoleMap } from '@client/user/selectors'
+import { UserDetails } from '@client/utils/userUtils'
+import { getUserDetails } from '@client/profile/profileSelectors'
 
 export const Action = styled.div`
   margin-top: 32px;
@@ -59,8 +61,9 @@ type IProps = {
   activeGroup: IFormSectionGroup
   nextSectionId: string
   nextGroupId: string
-  offlineCountryConfig: IOfflineData
+  config: IOfflineData
   systemRoleMap: ISystemRolesMap
+  user: UserDetails | null
 }
 
 type IState = {
@@ -89,8 +92,8 @@ class UserFormComponent extends React.Component<IFullProps, IState> {
   }
 
   handleFormAction = () => {
-    const { formData, activeGroup, offlineCountryConfig } = this.props
-    if (hasFormError(activeGroup.fields, formData, offlineCountryConfig)) {
+    const { formData, activeGroup, config, user } = this.props
+    if (hasFormError(activeGroup.fields, formData, config, {}, user)) {
       this.showAllValidationErrors()
     } else {
       this.props.userId
@@ -165,7 +168,7 @@ class UserFormComponent extends React.Component<IFullProps, IState> {
           goHome={() => goToTeamUserList(String(formData.registrationOffice))}
           hideBackground={true}
         >
-          <Content title={title}>
+          <Content size={ContentSize.SMALL} title={title}>
             <FormFieldGenerator
               key={activeGroup.id}
               id={section.id}
@@ -175,12 +178,16 @@ class UserFormComponent extends React.Component<IFullProps, IState> {
               onSetTouched={(setTouchedFunc) => {
                 this.setAllFormFieldsTouched = setTouchedFunc
               }}
+              draftData={{ user: formData }}
               requiredErrorMessage={messages.requiredForNewUser}
               onUploadingStateChanged={this.onUploadingStateChanged}
             />
             <Action>
-              <PrimaryButton
+              <Button
                 id="confirm_form"
+                type="primary"
+                size="large"
+                fullWidth
                 onClick={this.handleFormAction}
                 disabled={
                   this.state.disableContinueOnLocation ||
@@ -188,7 +195,7 @@ class UserFormComponent extends React.Component<IFullProps, IState> {
                 }
               >
                 {intl.formatMessage(buttonMessages.continueButton)}
-              </PrimaryButton>
+              </Button>
             </Action>
           </Content>
         </ActionPageLight>
@@ -199,10 +206,15 @@ class UserFormComponent extends React.Component<IFullProps, IState> {
 
 const mapStateToProps = (
   state: IStoreState
-): { offlineCountryConfig: IOfflineData; systemRoleMap: ISystemRolesMap } => {
+): {
+  config: IOfflineData
+  systemRoleMap: ISystemRolesMap
+  user: UserDetails | null
+} => {
   return {
     systemRoleMap: selectSystemRoleMap(state),
-    offlineCountryConfig: getOfflineData(state)
+    config: getOfflineData(state),
+    user: getUserDetails(state)
   }
 }
 

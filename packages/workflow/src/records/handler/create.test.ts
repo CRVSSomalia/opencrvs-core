@@ -14,10 +14,10 @@ import { readFileSync } from 'fs'
 import { createBirthRegistrationPayload } from '@test/mocks/createBirthRecord'
 import { server as mswServer } from '@test/setupServer'
 import { rest } from 'msw'
-import { TransactionResponse } from '@workflow/records/fhir'
 import {
   SavedBundle,
   SavedTask,
+  TransactionResponse,
   URLReference,
   SavedLocation
 } from '@opencrvs/commons/types'

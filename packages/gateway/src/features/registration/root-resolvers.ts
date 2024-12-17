@@ -9,7 +9,7 @@
  * Copyright (C) The OpenCRVS Authors located at https://github.com/opencrvs/opencrvs-core/blob/master/AUTHORS.
  */
 import { AUTH_URL, COUNTRY_CONFIG_URL, SEARCH_URL } from '@gateway/constants'
-import { fetchFHIR, getIDFromResponse } from '@gateway/features/fhir/service'
+import { fetchFHIR } from '@gateway/features/fhir/service'
 import { hasScope, inScope } from '@gateway/features/user/utils'
 import fetch from '@gateway/fetch'
 import { IAuthHeader } from '@opencrvs/commons'
@@ -20,8 +20,8 @@ import {
   Patient,
   Saved,
   Task,
-  buildFHIRBundle,
-  getComposition
+  getComposition,
+  getTaskFromSavedBundle
 } from '@opencrvs/commons/types'
 import {
   GQLBirthRegistrationInput,
@@ -372,22 +372,6 @@ export const resolvers: GQLResolver = {
 
       return createRegistration(details, EVENT_TYPE.MARRIAGE, authHeader)
     },
-    async updateBirthRegistration(_, { details }, { headers: authHeader }) {
-      if (
-        hasScope(authHeader, 'register') ||
-        hasScope(authHeader, 'validate')
-      ) {
-        const doc = buildFHIRBundle(details, EVENT_TYPE.BIRTH)
-
-        const res = await fetchFHIR('', authHeader, 'POST', JSON.stringify(doc))
-        // return composition-id
-        return getIDFromResponse(res)
-      } else {
-        return await Promise.reject(
-          new Error('User does not have a register or validate scope')
-        )
-      }
-    },
     async markBirthAsValidated(_, { id, details }, { headers: authHeader }) {
       const hasAssignedToThisUser = await checkUserAssignment(id, authHeader)
       if (!hasAssignedToThisUser) {
@@ -616,10 +600,12 @@ export const resolvers: GQLResolver = {
           new Error('User does not have a register or validate scope')
         )
       }
-      const task = (await unassignRegistration(id, authHeader)).entry[0]
+      const task = getTaskFromSavedBundle(
+        await unassignRegistration(id, authHeader)
+      )
 
       // return the taskId
-      return task.resource.id
+      return task.id
     },
     async markEventAsDuplicate(
       _,

@@ -9,18 +9,13 @@
  * Copyright (C) The OpenCRVS Authors located at https://github.com/opencrvs/opencrvs-core/blob/master/AUTHORS.
  */
 import { z } from 'zod'
-
-const handlebarTemplate = z.object({
-  fieldName: z.string(),
-  operation: z.string(),
-  parameters: z.array(z.any()).optional()
-})
-
-const messageDescriptor = z.object({
-  defaultMessage: z.string().optional(),
-  id: z.string(),
-  description: z.string().optional()
-})
+import {
+  messageDescriptor,
+  field,
+  handlebarTemplate,
+  isButtonField,
+  conditional
+} from '@config/handlers/forms/field'
 
 const previewGroup = z.object({
   id: z.string(),
@@ -31,28 +26,9 @@ const previewGroup = z.object({
   initialValue: z.string().optional()
 })
 
-const conditional = z.object({
-  description: z.string().optional(),
-  action: z.string(),
-  expression: z.string()
-})
-
 /*
  * TODO: The field validation needs to be made stricter
  */
-const field = z
-  .object({
-    name: z.string(),
-    type: z.string(),
-    custom: z.boolean().optional(),
-    label: messageDescriptor,
-    conditionals: z.array(conditional).optional(),
-    mapping: z
-      .object({ template: handlebarTemplate.optional() })
-      .passthrough()
-      .optional()
-  })
-  .passthrough()
 
 const group = z.object({
   id: z.string(),
@@ -65,7 +41,7 @@ const group = z.object({
 
 const section = z.object({
   id: z.string(),
-  viewType: z.enum(['form', 'hidden']),
+  viewType: z.enum(['form', 'hidden', 'preview', 'review']),
   name: messageDescriptor,
   title: messageDescriptor.optional(),
   groups: z.array(group),
@@ -228,7 +204,9 @@ const REQUIRED_FIELDS_IN_SECTION: Record<string, string[] | undefined> = {
     'familyNameEng',
     'relationship',
     'otherRelationship'
-  ]
+  ],
+  review: [],
+  preview: []
 }
 
 const OPTIONAL_FIELDS_IN_SECTION: Record<string, string[] | undefined> = {
@@ -343,7 +321,21 @@ const OPTIONAL_FIELDS_IN_SECTION: Record<string, string[] | undefined> = {
     ...OPTIONAL_PRIMARY_ADDRESS_FIELDS.map((field) => `${field}Informant`)
   ],
   witnessOne: ['middleNameEng'],
-  witnessTwo: ['middleNameEng']
+  witnessTwo: ['middleNameEng'],
+  review: [
+    'informantSignature',
+    'groomSignature',
+    'brideSignature',
+    'witnessOneSignature',
+    'witnessTwoSignature'
+  ],
+  preview: [
+    'informantSignature',
+    'groomSignature',
+    'brideSignature',
+    'witnessOneSignature',
+    'witnessTwoSignature'
+  ]
 }
 
 const form = z.object({
@@ -383,6 +375,34 @@ const form = z.object({
               message: `Missing required fields "${notIncludedRequiredFields.join(
                 ', '
               )}" found`
+            }
+          }
+        )
+        .refine(
+          (sec) => {
+            const fieldsInSection = sec.groups.flatMap((group) => group.fields)
+            const buttonFields = fieldsInSection.filter(isButtonField)
+            return buttonFields.every((button) =>
+              fieldsInSection.some(
+                (field) => button.options.trigger === field.name
+              )
+            )
+          },
+          (sec) => {
+            const fieldsInSection = sec.groups.flatMap((group) => group.fields)
+            const buttonFields = fieldsInSection.filter(isButtonField)
+            const buttonFieldsMissingTrigger = buttonFields
+              .filter(
+                (button) =>
+                  !fieldsInSection.some(
+                    (field) => button.options.trigger === field.name
+                  )
+              )
+              .map(({ name }) => name)
+            return {
+              message: `Missing trigger for button fields ${buttonFieldsMissingTrigger.join(
+                ','
+              )}`
             }
           }
         )
@@ -434,6 +454,79 @@ const form = z.object({
             }
           }
         )
+    )
+    .refine(
+      (sections) => {
+        const fieldMap = new Map()
+        sections.forEach((section) => {
+          section.groups.forEach((group) => {
+            group.fields.forEach((field) => {
+              if (
+                field.initialValue &&
+                typeof field.initialValue === 'object' &&
+                'dependsOn' in field.initialValue
+              ) {
+                fieldMap.set(field.name, field.initialValue.dependsOn)
+              } else {
+                fieldMap.set(field.name, [])
+              }
+            })
+          })
+        })
+
+        const hasCycle = (
+          fieldName: string,
+          visited: Set<string>,
+          stack: Set<string>
+        ) => {
+          if (!visited.has(fieldName)) {
+            visited.add(fieldName)
+            stack.add(fieldName)
+
+            const dependencies = fieldMap.get(fieldName) || []
+            for (const dep of dependencies) {
+              if (!visited.has(dep) && hasCycle(dep, visited, stack)) {
+                return true
+              } else if (stack.has(dep)) {
+                return true
+              }
+            }
+          }
+          stack.delete(fieldName)
+          return false
+        }
+        const visited: Set<string> = new Set()
+        const stack: Set<string> = new Set()
+        for (const section of sections) {
+          for (const group of section.groups) {
+            for (const field of group.fields) {
+              if (hasCycle(field.name, visited, stack)) {
+                return false
+              }
+            }
+          }
+        }
+
+        return true
+      },
+      {
+        message: 'Circular dependency detected among fields'
+      }
+    )
+
+    .refine(
+      (sections) =>
+        sections
+          .find(({ id }) => id === 'review')
+          ?.groups.some(({ id }) => id === 'review-view-group'),
+      `A "review" section is required in form configuration. It can optionally include SIGNATURE fields. An example configuration can be found in our Farajaland reference implementation.`
+    )
+    .refine(
+      (sections) =>
+        sections
+          .find(({ id }) => id === 'preview')
+          ?.groups.some(({ id }) => id === 'preview-view-group'),
+      `A "preview" section is required in form configuration. It can optionally include SIGNATURE fields. An example configuration can be found in our Farajaland reference implementation.`
     )
     .refine(
       (sections) =>

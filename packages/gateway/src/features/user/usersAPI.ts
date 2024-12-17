@@ -14,11 +14,6 @@ import { RESTDataSource, RequestOptions } from 'apollo-datasource-rest'
 import { AuthenticationError } from 'apollo-server-errors'
 import { IUserModelData } from './type-resolvers'
 
-type IAvatarResponse = {
-  userName: string
-  avatarURI?: string
-}
-
 export class UsersAPI extends RESTDataSource {
   constructor() {
     super()
@@ -32,10 +27,6 @@ export class UsersAPI extends RESTDataSource {
     for (const each of headerKeys) {
       request.headers.set(each, headers[each])
     }
-  }
-
-  async getUserAvatar(id: string): Promise<IAvatarResponse> {
-    return this.get(`users/${id}/avatar`)
   }
 
   async getUserByEmail(email: string): Promise<IUserModelData | null> {
@@ -81,7 +72,7 @@ export class UsersAPI extends RESTDataSource {
       else throw e
     }
   }
-  async getUserById(id: string) {
+  async getUserById(id: string): Promise<IUserModelData> {
     const cacheKey = `${this.baseURL}/getUser:user:${id}`
 
     const cachedResponse = this.memoizedResults.get(cacheKey)
@@ -97,7 +88,7 @@ export class UsersAPI extends RESTDataSource {
     return response
   }
 
-  async getUserByPractitionerId(id: string) {
+  async getUserByPractitionerId(id: string): Promise<IUserModelData> {
     const cacheKey = `${this.baseURL}/getUser:practitioner:${id}`
 
     const cachedResponse = this.memoizedResults.get(cacheKey)

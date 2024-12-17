@@ -125,7 +125,7 @@ type RegWorkflow { # Task
   timestamp: Date # -> lastModified
   comments: [Comment] # -> .note
   reason: String # -> .reason.text
-  location: Location # -> extension(url='http://opencrvs.org/specs/extension/regLastLocation').valueReference
+  location: Location # -> extension(url='http://opencrvs.org/specs/extension/regLastOffice').valueReference.partOf
   office: Location # -> extension(url='http://opencrvs.org/specs/extension/regLastOffice').valueReference
   timeLogged: Int # -> from metrics
 }
@@ -164,7 +164,7 @@ type History {
   #This doesn't resolve to the System model properly rather
   #uses the getSystem endpoint in user-mgnt
   system: IntegratedSystem # -> identitifier(system='http://opencrvs.org/specs/extension/system_identifier')
-  location: Location # -> extension(url='http://opencrvs.org/specs/extension/regLastLocation').valueReference
+  location: Location # -> extension(url='http://opencrvs.org/specs/extension/regLastOffice').valueReference.partOf
   office: Location # -> extension(url='http://opencrvs.org/specs/extension/regLastOffice').valueReference
   dhis2Notification: Boolean # -> identitifier(system='http://opencrvs.org/specs/extension/dhis2_event_identifier')
   comments: [Comment]
@@ -408,11 +408,6 @@ type Registration { # -> Task
   brideSignature: String # -> extension(url='http://opencrvs.org/specs/extension/bride-signature').valueString
   witnessOneSignature: String # -> extension(url='http://opencrvs.org/specs/extension/witness-one-signature').valueString
   witnessTwoSignature: String # -> extension(url='http://opencrvs.org/specs/extension/witness-two-signature').valueString
-  informantsSignatureURI: String # actual minio object uri for informantsSignature
-  groomSignatureURI: String # actual minio object uri for groomSignatureURI
-  brideSignatureURI: String # actual minio object uri for brideSignatureURI
-  witnessOneSignatureURI: String # actual minio object uri for witnessOneSignatureURI
-  witnessTwoSignatureURI: String # actual minio object uri for witnessTwoSignatureURI
   contactPhoneNumber: String # -> extension(url='http://opencrvs.org/specs/extension/contact-person-phone-number').valueString
   contactEmail: String # -> extension(url='http://opencrvs.org/specs/extension/contact-person-email').valueString
   status: [RegWorkflow] # -> Task.*
@@ -605,7 +600,6 @@ type Mutation {
 
   # BIRTH
   createBirthRegistration(details: BirthRegistrationInput!): CreatedIds!
-  updateBirthRegistration(id: ID!, details: BirthRegistrationInput!): ID!
   # process transitions
   markBirthAsVerified(
     id: ID!

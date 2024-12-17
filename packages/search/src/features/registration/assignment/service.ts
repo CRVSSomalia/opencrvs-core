@@ -12,22 +12,26 @@ import { updateComposition } from '@search/elasticsearch/dbhelper'
 import {
   getUser,
   IAssignment,
-  ICompositionBody,
   IUserModelData,
   NAME_EN
 } from '@search/elasticsearch/utils'
 import { findName, findTaskExtension } from '@search/features/fhir/fhir-utils'
 import * as Hapi from '@hapi/hapi'
-import { getTokenPayload, ITokenPayload } from '@search/utils/authUtils'
-import { client } from '@search/elasticsearch/client'
-import { getTaskFromSavedBundle, SavedBundle } from '@opencrvs/commons/types'
+import { getOrCreateClient } from '@search/elasticsearch/client'
+import {
+  findExtension,
+  findLastOfficeFromSavedBundle,
+  getTaskFromSavedBundle,
+  LAST_USER_EXTENSION_URL,
+  resourceIdentifierToUUID,
+  SavedBundle,
+  SearchDocument
+} from '@opencrvs/commons/types'
 
 export async function updateEventToAddAssignment(requestBundle: Hapi.Request) {
+  const client = getOrCreateClient()
   const bundle = requestBundle.payload as SavedBundle
   const authHeader = requestBundle.headers.authorization
-
-  const token: ITokenPayload = getTokenPayload(authHeader.split(' ')[1])
-  const userId = token.sub
 
   const task = getTaskFromSavedBundle(bundle)
 
@@ -41,20 +45,22 @@ export async function updateEventToAddAssignment(requestBundle: Hapi.Request) {
     task,
     'http://opencrvs.org/specs/extension/regLastUser'
   )
-  const regLastOfficeIdentifier = findTaskExtension(
-    task,
-    'http://opencrvs.org/specs/extension/regLastOffice'
+  const regLastOffice = findLastOfficeFromSavedBundle(bundle)
+  const regLastUserExtension = findExtension(
+    LAST_USER_EXTENSION_URL,
+    task.extension
+  )
+  const practitionerId = resourceIdentifierToUUID(
+    regLastUserExtension!.valueReference.reference
   )
 
-  const body: ICompositionBody = {}
+  const body: SearchDocument = {
+    compositionId
+  }
   body.modifiedAt = Date.now().toString()
   body.assignment = {} as IAssignment
-  body.assignment.officeName =
-    (regLastOfficeIdentifier &&
-      regLastOfficeIdentifier.valueString &&
-      regLastOfficeIdentifier.valueString) ||
-    ''
-  body.assignment.userId = userId
+  body.assignment.officeName = regLastOffice?.name ?? ''
+  body.assignment.practitionerId = practitionerId
   body.updatedBy =
     regLastUserIdentifier &&
     regLastUserIdentifier.valueReference &&
@@ -75,6 +81,7 @@ export async function updateEventToAddAssignment(requestBundle: Hapi.Request) {
 export async function updateEventToRemoveAssignment(
   requestBundle: Hapi.Request
 ) {
+  const client = getOrCreateClient()
   const bundle = requestBundle.payload as SavedBundle
 
   const task = getTaskFromSavedBundle(bundle)
@@ -93,7 +100,7 @@ export async function updateEventToRemoveAssignment(
     task,
     'http://opencrvs.org/specs/extension/regLastUser'
   )
-  const body: ICompositionBody = {}
+  const body: SearchDocument = { compositionId }
   body.modifiedAt = Date.now().toString()
   body.assignment = null
   body.updatedBy =

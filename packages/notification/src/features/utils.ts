@@ -8,19 +8,18 @@
  *
  * Copyright (C) The OpenCRVS Authors located at https://github.com/opencrvs/opencrvs-core/blob/master/AUTHORS.
  */
-
-import { getDefaultLanguage } from '@notification/i18n/utils'
 import {
   CompositionSectionCode,
   findCompositionSection,
   findExtension,
+  findLastOfficeFromSavedBundle,
   getComposition,
+  findLastOfficeLocationFromSavedBundle,
   getResourceFromBundleById,
   getStatusFromTask,
   getTaskFromSavedBundle,
-  Location,
-  Patient,
   InProgressRecord,
+  Patient,
   ReadyForReviewRecord,
   RegisteredRecord,
   RelatedPerson,
@@ -52,11 +51,7 @@ export function getContactEmail(
 }
 
 function error(
-  record:
-    | ReadyForReviewRecord
-    | RegisteredRecord
-    | InProgressRecord
-    | RejectedRecord,
+  record: ReadyForReviewRecord | RegisteredRecord | RejectedRecord,
   message: string
 ): never {
   const task = getTaskFromSavedBundle(record)
@@ -71,15 +66,8 @@ export function getOfficeName(
     | InProgressRecord
     | RejectedRecord
 ) {
-  const task = getTaskFromSavedBundle(record)
-  const officeExtension = findExtension(
-    'http://opencrvs.org/specs/extension/regLastOffice',
-    task.extension
-  )
-  if (!officeExtension?.valueString) {
-    error(record, 'Office extension not found')
-  }
-  return officeExtension.valueString
+  const office = findLastOfficeFromSavedBundle(record)
+  return office.name
 }
 
 export function getInformantName(
@@ -105,11 +93,11 @@ export function getInformantName(
   if (!name) {
     error(record, 'name not found in informant patient resource')
   }
-  return [name.given?.join(' '), name.family.join(' ')].join(' ').trim()
+  return [name.given?.join(' '), name.family?.join(' ')].join(' ').trim()
 }
 
 export function getPersonName(
-  record: ReadyForReviewRecord | RegisteredRecord,
+  record: ReadyForReviewRecord | RegisteredRecord | RejectedRecord,
   personType: 'deceased' | 'child'
 ) {
   const compositionCode: Extract<
@@ -129,7 +117,8 @@ export function getPersonName(
   if (!name) {
     error(record, `name not found in patient resource for ${compositionCode}`)
   }
-  return [name.given?.join(' '), name.family.join(' ')].join(' ').trim()
+  // the trim used in given name handles the case when a country does not have middlename
+  return [name.given?.join(' ').trim(), name.family].join(' ').trim()
 }
 
 export function getRegistrationLocation(
@@ -139,22 +128,7 @@ export function getRegistrationLocation(
     | InProgressRecord
     | RejectedRecord
 ) {
-  const task = getTaskFromSavedBundle(record)
-  const locationExtension = findExtension(
-    'http://opencrvs.org/specs/extension/regLastLocation',
-    task.extension
-  )
-  if (!locationExtension) {
-    error(record, 'No last registration office found')
-  }
-  const location = getResourceFromBundleById<Location>(
-    record,
-    resourceIdentifierToUUID(locationExtension.valueReference.reference)
-  )
-  const language = getDefaultLanguage()
-  return (
-    (language === 'en'
-      ? location.name
-      : location.alias?.[0] ?? location.name) ?? ''
-  )
+  const location = findLastOfficeLocationFromSavedBundle(record)
+
+  return location.name || ''
 }

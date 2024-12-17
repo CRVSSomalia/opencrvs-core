@@ -24,11 +24,14 @@ import {
   Accordion,
   DocumentViewer,
   IDocumentViewerOptions,
-  ResponsiveModal
+  ResponsiveModal,
+  Icon,
+  Stack
 } from '@opencrvs/components'
 import {
   IDeclaration,
   SUBMISSION_STATUS,
+  modifyDeclaration,
   writeDeclaration
 } from '@client/declarations'
 import { ReviewAction } from '@client/components/form/ReviewActionComponent'
@@ -70,11 +73,7 @@ import {
   DIVIDER,
   HIDDEN
 } from '@client/forms'
-import { Event } from '@client/utils/gateway'
-import {
-  getBirthSection,
-  getRegisterForm
-} from '@client/forms/register/declaration-selectors'
+import { Event, RegStatus } from '@client/utils/gateway'
 import {
   getConditionalActionsForField,
   getListOfLocations,
@@ -122,8 +121,8 @@ import {
 import { connect } from 'react-redux'
 import { ReviewHeader } from './ReviewHeader'
 import { IValidationResult } from '@client/utils/validate'
-import { DocumentListPreview } from '@client/components/form/DocumentUploadfield/DocumentListPreview'
-import { DocumentPreview } from '@client/components/form/DocumentUploadfield/DocumentPreview'
+import { DocumentListPreview } from '@client/components/form/DocumentUploadField/DocumentListPreview'
+import { DocumentPreview } from '@client/components/form/DocumentUploadField/DocumentPreview'
 import { generateLocations } from '@client/utils/locationUtils'
 import {
   addressFieldNames,
@@ -134,17 +133,23 @@ import {
 import { ListReview } from '@opencrvs/components/lib/ListReview'
 import { DuplicateWarning } from '@client/views/Duplicates/DuplicateWarning'
 import { VerificationButton } from '@opencrvs/components/lib/VerificationButton'
-import {
-  SignatureGenerator,
-  SignatureInputProps
-} from '@client/views/RegisterForm/review/SignatureGenerator'
 import { DuplicateForm } from '@client/views/RegisterForm/duplicate/DuplicateForm'
 import { Button } from '@opencrvs/components/lib/Button'
 import { UserDetails } from '@client/utils/userUtils'
+import { FormFieldGenerator } from '@client/components/form'
 
 const Deleted = styled.del`
   color: ${({ theme }) => theme.colors.negative};
 `
+
+const RequiredDocument = styled(Stack)`
+  padding-left: 8px;
+  height: 40px;
+  :not(:last-child) {
+    border-bottom: 1px solid ${({ theme }) => theme.colors.grey200};
+  }
+`
+
 export const RequiredField = styled.span`
   color: ${({ theme }) => theme.colors.negative};
   display: inline-block;
@@ -262,10 +267,11 @@ type onChangeReviewForm = (
 
 interface IProps {
   draft: IDeclaration
-  registerForm: { [key: string]: IForm }
+  form: IForm
   pageRoute: string
   rejectDeclarationClickEvent?: () => void
   goToPageGroup: typeof goToPageGroup
+  modifyDeclaration: typeof modifyDeclaration
   submitClickEvent: (
     declaration: IDeclaration,
     submissionStatus: string,
@@ -279,7 +285,7 @@ interface IProps {
   writeDeclaration: typeof writeDeclaration
   registrationSection: IFormSection
   documentsSection: IFormSection
-  userDetails?: UserDetails | null
+  userDetails: UserDetails | null
   viewRecord?: boolean
   reviewSummaryHeader?: React.ReactNode
 }
@@ -577,6 +583,7 @@ export const getErrorsOnFieldsBySection = (
   formSections: IFormSection[],
   offlineCountryConfig: IOfflineData,
   draft: IDeclaration,
+  user: UserDetails | null,
   checkValidationErrorsOnly?: boolean
 ): IErrorsBySection => {
   return formSections.reduce((sections, section: IFormSection) => {
@@ -591,6 +598,7 @@ export const getErrorsOnFieldsBySection = (
       draft.data[section.id] || {},
       offlineCountryConfig,
       draft.data,
+      user,
       undefined,
       checkValidationErrorsOnly
     )
@@ -620,14 +628,6 @@ export const getErrorsOnFieldsBySection = (
       }, {})
     }
   }, {})
-}
-
-enum SignatureSectionType {
-  INFORMANT_SIGNATURE = 'informantsSignature',
-  BRIDE_SIGNATURE = 'brideSignature',
-  GROOM_SIGNATURE = 'groomSignature',
-  WITNESS_ONE_SIGNATURE = 'witnessOneSignature',
-  WITNESS_TWO_SIGNATURE = 'witnessTwoSignature'
 }
 
 class ReviewSectionComp extends React.Component<FullProps, State> {
@@ -664,9 +664,8 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
   }
 
   getViewableSection = (registerForm: IForm): IFormSection[] => {
-    const sections = registerForm.sections.filter(
-      ({ id, viewType }) =>
-        id !== 'documents' && (viewType === 'form' || viewType === 'hidden')
+    const sections = registerForm.sections.filter(({ viewType }) =>
+      ['form', 'hidden', 'preview', 'review'].includes(viewType)
     )
 
     return this.getVisibleSections(sections)
@@ -674,9 +673,9 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
 
   getLabelForDoc = (docForWhom: string, docType: string) => {
     const { intl } = this.props
-    const documentSection = this.props.registerForm[
-      this.props.draft.event
-    ].sections.find((section) => section.id === 'documents')
+    const documentSection = this.props.form.sections.find(
+      (section) => section.id === 'documents'
+    )
     const docSectionFields = documentSection && documentSection.groups[0].fields
     const docFieldsWithOptions =
       docSectionFields &&
@@ -702,7 +701,7 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
   getAllAttachmentInPreviewList = (declaration: IDeclaration) => {
     const options = this.prepSectionDocOptions(declaration)
 
-    return (
+    return options.uploadedDocuments.length > 0 ? (
       <DocumentListPreviewContainer>
         <DocumentListPreview
           id="all_attachment_list"
@@ -712,7 +711,7 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
           inReviewSection={true}
         />
       </DocumentListPreviewContainer>
-    )
+    ) : null
   }
 
   prepSectionDocOptions = (
@@ -895,7 +894,7 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
       <RequiredField id={`required_label_${section.id}_${field.name}`}>
         {field.ignoreFieldLabelOnErrorMessage ||
           (field.previewGroup &&
-            this.props.intl.formatMessage(field.label) + ' ')}
+            this.props.intl.formatMessage(field.label, field.labelParam) + ' ')}
         {this.props.intl.formatMessage(
           errorsOnField.message,
           errorsOnField.props
@@ -1442,7 +1441,7 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
       overriddenField,
       'reviewOverrides.residingSection'
     )
-    const residingSection = this.props.registerForm.death.sections.find(
+    const residingSection = this.props.form.sections.find(
       (section) => section.id === residingSectionId
     ) as IFormSection
 
@@ -1544,8 +1543,8 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
   }
 
   isLastNameFirst = () => {
-    const { registerForm, draft: declaration } = this.props
-    const fields = registerForm[declaration.event].sections.find((section) =>
+    const { form, draft: declaration } = this.props
+    const fields = form.sections.find((section) =>
       declaration.event === Event.Birth
         ? section.id === 'child'
         : section.id === 'deceased'
@@ -1657,7 +1656,7 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
     const {
       intl,
       draft: declaration,
-      registerForm,
+      form,
       rejectDeclarationClickEvent,
       submitClickEvent,
       registrationSection,
@@ -1666,12 +1665,13 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
       draft: { event },
       onContinue,
       viewRecord,
-      reviewSummaryHeader
+      reviewSummaryHeader,
+      userDetails
     } = this.props
     const isDuplicate = Boolean(declaration.duplicates?.length)
     const formSections =
       viewRecord || isDuplicate
-        ? this.getViewableSection(registerForm[event]).map((section) => {
+        ? this.getViewableSection(form).map((section) => {
             return {
               ...section,
               groups: section.groups.map((group) => {
@@ -1682,44 +1682,25 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
               })
             }
           })
-        : this.getViewableSection(registerForm[event])
+        : this.getViewableSection(form)
     const errorsOnFields = getErrorsOnFieldsBySection(
       formSections,
       offlineCountryConfiguration,
-      declaration
+      declaration,
+      userDetails
     )
     const badInputErrors = getErrorsOnFieldsBySection(
       formSections,
       offlineCountryConfiguration,
       declaration,
+      userDetails,
       true
     )
-
-    const isSignatureMissing = () => {
-      if (isCorrection(declaration)) {
-        return false
-      } else {
-        if (event === Event.Birth || event === Event.Death) {
-          return (
-            offlineCountryConfiguration.config.FEATURES
-              .INFORMANT_SIGNATURE_REQUIRED &&
-            !declaration.data.registration?.informantsSignature
-          )
-        } else if (event === Event.Marriage) {
-          return (
-            !declaration.data.registration?.groomSignature ||
-            !declaration.data.registration?.brideSignature ||
-            !declaration.data.registration?.witnessOneSignature ||
-            !declaration.data.registration?.witnessTwoSignature
-          )
-        }
-      }
-    }
 
     const isComplete =
       flatten(Object.values(errorsOnFields).map(Object.values)).filter(
         (errors) => errors.errors.length > 0
-      ).length === 0 && !isSignatureMissing()
+      ).length === 0
     const hasValidationErrors =
       flatten(Object.values(badInputErrors).map(Object.values)).filter(
         (errors) => errors.errors.length > 0
@@ -1736,8 +1717,7 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
       },
       value: ((declaration.data.registration &&
         declaration.data.registration.commentsOrNotes) ||
-        '') as any,
-      ignoreMediaQuery: true
+        '') as string
     }
 
     const informantName = getDeclarationFullName(
@@ -1747,112 +1727,31 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
     )
     const draft = this.isDraft()
     const transformedSectionData = this.transformSectionData(
-      formSections,
+      formSections.filter(
+        ({ id, viewType }) =>
+          id !== 'documents' && !['preview', 'review'].includes(viewType)
+      ),
       errorsOnFields,
       offlineCountryConfiguration,
       declaration
     )
     const totalFileSizeExceeded = isFileSizeExceeded(declaration)
 
-    const generateSignatureProps = (
-      sectionType: SignatureSectionType,
-      id: string,
-      value: string,
-      inputLabel: string,
-      isRequired: boolean
-    ): SignatureInputProps => {
-      return {
-        id: id,
-        onChange: (value: string) => {
-          this.props.onChangeReviewForm &&
-            this.props.onChangeReviewForm(
-              {
-                [sectionType]: value,
-                [sectionType + 'URI']: ''
-              },
-              registrationSection,
-              declaration
-            )
-        },
-        value: value,
-        label: inputLabel,
-        isRequired: isRequired
-      }
-    }
-
-    const getSignature = (eventType: Event) => {
-      if ([Event.Birth, Event.Death].includes(eventType)) {
-        if (!window.config.FEATURES.INFORMANT_SIGNATURE) {
-          return <></>
+    const modifyDeclaration = (
+      sectionData: IFormSectionData,
+      section: IFormSection,
+      declaration: IDeclaration
+    ) => {
+      this.props.modifyDeclaration({
+        ...declaration,
+        data: {
+          ...declaration.data,
+          [section.id]: {
+            ...declaration.data[section.id],
+            ...sectionData
+          }
         }
-        const informantsSignatureInputPros = generateSignatureProps(
-          SignatureSectionType.INFORMANT_SIGNATURE,
-          'informants_signature',
-          declaration.data.registration?.informantsSignature as string,
-          intl.formatMessage(messages.informantsSignature),
-          window.config.FEATURES.INFORMANT_SIGNATURE_REQUIRED
-        )
-        return (
-          <>
-            <Accordion
-              name="signatures"
-              label="Signatures"
-              labelForHideAction={intl.formatMessage(messages.hideLabel)}
-              labelForShowAction={intl.formatMessage(messages.showLabel)}
-              expand={true}
-            >
-              <SignatureGenerator
-                description={intl.formatMessage(messages.signatureDescription)}
-                {...informantsSignatureInputPros}
-              />
-            </Accordion>
-          </>
-        )
-      } else if ([Event.Marriage].includes(eventType)) {
-        const brideSignatureInputPros = generateSignatureProps(
-          SignatureSectionType.BRIDE_SIGNATURE,
-          'bride_signature',
-          declaration.data.registration?.brideSignature as string,
-          intl.formatMessage(messages.brideSignature),
-          true
-        )
-
-        const groomSignatureInputPros = generateSignatureProps(
-          SignatureSectionType.GROOM_SIGNATURE,
-          'groom_signature',
-          declaration.data.registration?.groomSignature as string,
-          intl.formatMessage(messages.groomSignature),
-          true
-        )
-
-        const witnessOneSignatureInputPros = generateSignatureProps(
-          SignatureSectionType.WITNESS_ONE_SIGNATURE,
-          'witness_one_signature',
-          declaration.data.registration?.witnessOneSignature as string,
-          intl.formatMessage(messages.witnessOneSignature),
-          true
-        )
-
-        const witnessTwoSignatureInputPros = generateSignatureProps(
-          SignatureSectionType.WITNESS_TWO_SIGNATURE,
-          'witness_two_signature',
-          declaration.data.registration?.witnessTwoSignature as string,
-          intl.formatMessage(messages.witnessTwoSignature),
-          true
-        )
-
-        return (
-          <>
-            <Text id="terms" element="p" variant="reg16">
-              {intl.formatMessage(messages.terms)}
-            </Text>
-            <SignatureGenerator {...groomSignatureInputPros} />
-            <SignatureGenerator {...brideSignatureInputPros} />
-            <SignatureGenerator {...witnessOneSignatureInputPros} />
-            <SignatureGenerator {...witnessTwoSignatureInputPros} />
-          </>
-        )
-      }
+      })
     }
 
     const options = this.prepSectionDocOptions(declaration)
@@ -1861,6 +1760,16 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
         this.isVisibleField(field, documentsSection)
       ).length
     )
+
+    const reviewSection = formSections.find(({ viewType }) =>
+      ['preview', 'review'].includes(viewType)
+    )
+
+    if (!reviewSection) {
+      throw new Error(
+        'The form definition should always contain a review or preview section'
+      )
+    }
 
     return (
       <Wrapper>
@@ -1892,7 +1801,7 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
                 <ReviewContainter>
                   {transformedSectionData
                     .filter((sec) => sec.items.length > 0)
-                    .map((sec, index) => {
+                    .map((sec) => {
                       return (
                         <DeclarationDataContainer key={'Section_' + sec.id}>
                           <Accordion
@@ -1901,7 +1810,7 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
                             action={
                               sec.action &&
                               declaration.registrationStatus !==
-                                SUBMISSION_STATUS.CORRECTION_REQUESTED && (
+                                RegStatus.CorrectionRequested && (
                                 <Link font="reg16" onClick={sec.action.handler}>
                                   {sec.action.label}
                                 </Link>
@@ -1925,7 +1834,7 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
                                   actions={
                                     !item?.action?.disabled &&
                                     declaration.registrationStatus !==
-                                      SUBMISSION_STATUS.CORRECTION_REQUESTED && (
+                                      RegStatus.CorrectionRequested && (
                                       <Link
                                         key={item.action.id}
                                         id={item.action.id}
@@ -1954,7 +1863,7 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
                       viewRecord ||
                       isDuplicate ||
                       declaration.registrationStatus ===
-                        SUBMISSION_STATUS.CORRECTION_REQUESTED ? null : (
+                        RegStatus.CorrectionRequested ? null : (
                         <Link
                           font="reg16"
                           element="button"
@@ -1971,6 +1880,34 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
                     }
                     expand={true}
                   >
+                    {errorsOnFields.documents &&
+                      Object.entries(errorsOnFields.documents)
+                        .map(
+                          ([fieldName, { errors }]) =>
+                            [
+                              documentsSection.groups[0].fields.find(
+                                ({ name }) => name === fieldName
+                              )!,
+                              errors
+                            ] as const
+                        )
+                        .filter(([_, errors]) => errors.length > 0)
+                        .map(([field, errors]) => (
+                          <RequiredDocument key={field.name}>
+                            <Icon
+                              color="currentColor"
+                              name="Paperclip"
+                              size="medium"
+                            />
+                            <Text variant="reg16" element="span">
+                              {intl.formatMessage(field.label)}
+                            </Text>
+
+                            <Text variant="reg16" element="span" color="red">
+                              ({intl.formatMessage(errors[0].message)})
+                            </Text>
+                          </RequiredDocument>
+                        ))}
                     {this.getAllAttachmentInPreviewList(declaration)}
                   </Accordion>
 
@@ -1992,19 +1929,33 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
                         required={false}
                       >
                         <TextArea
-                          {...{
-                            ...textAreaProps,
-                            disabled: viewRecord || isDuplicate
-                          }}
+                          {...textAreaProps}
+                          disabled={viewRecord || isDuplicate}
                         />
                       </InputField>
                     </Accordion>
                   )}
 
-                  {!isCorrection(declaration) &&
-                    !isDuplicate &&
-                    !viewRecord &&
-                    getSignature(declaration?.event as Event)}
+                  {!(
+                    isCorrection(declaration) ||
+                    viewRecord ||
+                    isDuplicate
+                  ) && (
+                    <FormFieldGenerator
+                      id={reviewSection.id}
+                      key={reviewSection.id}
+                      onChange={(values) => {
+                        modifyDeclaration(values, reviewSection, declaration)
+                      }}
+                      setAllFieldsDirty={false}
+                      fields={reviewSection.groups[0].fields}
+                      draftData={declaration.data}
+                      initialValues={
+                        declaration.data.preview ?? declaration.data.review
+                      }
+                    />
+                  )}
+
                   {totalFileSizeExceeded && (
                     <StyledAlert type="warning">
                       {intl.formatMessage(
@@ -2019,7 +1970,7 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
                 {viewRecord ||
                 isDuplicate ||
                 declaration.registrationStatus ===
-                  SUBMISSION_STATUS.CORRECTION_REQUESTED ? null : (
+                  RegStatus.CorrectionRequested ? null : (
                   <>
                     {!isCorrection(declaration) ? (
                       <>
@@ -2068,7 +2019,7 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
               isRegisterScope={this.userHasRegisterScope()}
             >
               <DocumentViewer id="document_section" options={options}>
-                {options.uploadedDocuments.length == 0 && (
+                {options.uploadedDocuments.length === 0 && (
                   <ZeroDocument id={`zero_document`}>
                     {intl.formatMessage(
                       messages.zeroDocumentsTextForAnySection
@@ -2077,7 +2028,7 @@ class ReviewSectionComp extends React.Component<FullProps, State> {
                     isDuplicate ||
                     !isUploadButtonVisible ||
                     declaration.registrationStatus ===
-                      SUBMISSION_STATUS.CORRECTION_REQUESTED ? null : (
+                      RegStatus.CorrectionRequested ? null : (
                       <LinkButton
                         id="edit-document"
                         disabled={isCorrection(declaration)}
@@ -2162,15 +2113,22 @@ function fieldToReadOnlyFields(field: IFormField): IFormField {
   }
   return readyOnlyField
 }
-
 export const ReviewSection = connect(
-  (state: IStoreState) => ({
-    registerForm: getRegisterForm(state),
-    registrationSection: getBirthSection(state, 'registration'),
-    documentsSection: getBirthSection(state, 'documents'),
-    scope: getScope(state),
-    offlineCountryConfiguration: getOfflineData(state),
-    language: getLanguage(state)
-  }),
-  { goToPageGroup, writeDeclaration }
+  (state: IStoreState, { form }: { form: IForm }) => {
+    const registrationSection = form.sections.find(
+      ({ id }) => id === 'registration'
+    )
+    const documentsSection = form.sections.find(({ id }) => id === 'documents')
+    if (!registrationSection || !documentsSection) {
+      throw new Error('"registration" & "documents" are required sections')
+    }
+    return {
+      registrationSection,
+      documentsSection,
+      scope: getScope(state),
+      offlineCountryConfiguration: getOfflineData(state),
+      language: getLanguage(state)
+    }
+  },
+  { goToPageGroup, writeDeclaration, modifyDeclaration }
 )(injectIntl(ReviewSectionComp))

@@ -15,6 +15,11 @@ import { CsvWriter } from 'csv-writer/src/lib/csv-writer'
 import * as fs from 'fs'
 // eslint-disable-next-line import/no-relative-parent-imports
 import { BIRTH_REPORT_PATH, DEATH_REPORT_PATH } from '../constants'
+import {
+  isHealthFacility,
+  Location,
+  resourceIdentifierToUUID
+} from '@opencrvs/commons/types'
 
 const HEARTH_MONGO_URL =
   process.env.HEARTH_MONGO_URL || 'mongodb://localhost/hearth-dev'
@@ -157,8 +162,10 @@ const EDUCATION_LEVEL_MAP = {
 const connect = async () => {
   try {
     await client.connect()
+    // eslint-disable-next-line no-console
     console.log('Connected to mongoDB')
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.log('Error occured while connecting to mongoDB', err)
   }
 }
@@ -166,8 +173,10 @@ const connect = async () => {
 const disconnect = async () => {
   try {
     await client.close()
+    // eslint-disable-next-line no-console
     console.log('Closed mongoDB connection.')
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.log('Error occured while disconnecting to mongoDB', err)
   }
 }
@@ -263,7 +272,7 @@ function makePatientObject(patient: fhir.Patient) {
 
 async function setPatientsAddress(
   patients: fhir.Patient[],
-  locations: fhir.Location[]
+  locations: Location[]
 ) {
   patients.forEach((patient) => {
     if (patient.address) {
@@ -286,7 +295,7 @@ async function setPatientsAddress(
 async function setPatientsDetailsInComposition(
   composition: fhir.Composition,
   fullComposition: Partial<IFullComposition>,
-  locations: fhir.Location[]
+  locations: Location[]
 ) {
   const patientList = composition.section?.filter((section) =>
     section.entry?.[0].reference?.startsWith('Patient/')
@@ -317,7 +326,7 @@ async function setPatientsDetailsInComposition(
 async function setLocationInComposition(
   composition: fhir.Composition,
   fullComposition: Partial<IFullComposition>,
-  locations: fhir.Location[],
+  locations: Location[],
   task: fhir.Task
 ) {
   const encounter = composition.section?.find(
@@ -335,39 +344,36 @@ async function setLocationInComposition(
     'Location/',
     ''
   )
-  const locationDoc = locations.find(
-    ({ id }) => id === locationId
-  ) as fhir.Location
+  const locationDoc = locations.find(({ id }) => id === locationId)
 
-  const isLocationHealthFacility =
-    locationDoc.type?.coding?.[0].code === 'HEALTH_FACILITY'
+  const isLocationHealthFacility = locationDoc && isHealthFacility(locationDoc)
 
   if (isLocationHealthFacility) {
-    const districtLocationId = String(
-      locationDoc.partOf?.reference?.replace('Location/', '')
+    const districtLocationId = resourceIdentifierToUUID(
+      locationDoc.partOf.reference
     )
     const districtLocationDoc = locations.find(
       ({ id }) => id === districtLocationId
     )
-    const stateLocationId = String(
-      districtLocationDoc?.partOf?.reference?.replace('Location/', '')
-    )
+    const stateLocationId =
+      districtLocationDoc?.partOf?.reference &&
+      resourceIdentifierToUUID(districtLocationDoc.partOf.reference)
     const stateLocationDoc = locations.find(({ id }) => id === stateLocationId)
     fullComposition['healthCenter'] = locationDoc.name ?? ''
     fullComposition['eventDistrict'] = districtLocationDoc?.name ?? ''
     fullComposition['eventState'] = stateLocationDoc?.name ?? ''
   } else {
     const districtLocation = locations.find(
-      ({ id }) => id === locationDoc.address?.district
+      ({ id }) => id === locationDoc?.address?.district
     )
     const stateLocation = locations.find(
-      ({ id }) => id === locationDoc.address?.state
+      ({ id }) => id === locationDoc?.address?.state
     )
     fullComposition['eventDistrict'] = districtLocation?.name ?? ''
     fullComposition['eventState'] = stateLocation?.name ?? ''
   }
 
-  fullComposition['eventCity'] = locationDoc.address?.city ?? ''
+  fullComposition['eventCity'] = locationDoc?.address?.city ?? ''
 
   const officeLocationId = task.extension
     ?.find((obj) => obj.url === officeLocationExtURL)
@@ -465,7 +471,7 @@ async function setObservationDetailsInComposition(
 async function setInformantDetailsInComposition(
   composition: fhir.Composition,
   fullComposition: Partial<IFullComposition>,
-  locations: fhir.Location[]
+  locations: Location[]
 ) {
   const informant = composition.section?.find(
     (section) =>
@@ -635,7 +641,7 @@ async function createDeathDeclarationCSVWriter() {
 
 async function makeCompositionAndExportCSVReport(
   compositionsCursor: FindCursor<Document>,
-  locations: fhir.Location[],
+  locations: Location[],
   birthCSVWriter: CsvWriter<any>,
   deathCSVWriter: CsvWriter<any>,
   startDate: string,
@@ -650,6 +656,7 @@ async function makeCompositionAndExportCSVReport(
         const percentage = Math.round(
           (processedDatacount / totalCompositionCount) * 100
         )
+        // eslint-disable-next-line no-console
         console.log(
           `VSEXPORT GENERATION: Vital statistics export for month ${DateFNS.format(
             new Date(startDate),
@@ -667,7 +674,11 @@ async function makeCompositionAndExportCSVReport(
 
         const businessStatus = task.businessStatus?.coding?.[0].code
 
-        if (businessStatus === 'CERTIFIED' || 'REGISTERED' || 'ISSUED') {
+        if (
+          businessStatus === 'CERTIFIED' ||
+          businessStatus === 'REGISTERED' ||
+          businessStatus === 'ISSUED'
+        ) {
           composition.section = composition.section?.filter(
             (sec) =>
               sec.title &&
@@ -857,13 +868,16 @@ async function makeCompositionAndExportCSVReport(
           }
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.log('Sorry. Something went wrong!', error)
       }
     }
+    // eslint-disable-next-line no-console
     console.log(
       `VSEXPORT GENERATION: Successfully generated CSV report for birth and death declarations from ${startDate} to ${endDate}`
     )
   } else {
+    // eslint-disable-next-line no-console
     console.log(
       `VSEXPORT GENERATION: No record found from ${startDate} to ${endDate}`
     )
@@ -878,6 +892,7 @@ const startScript = async () => {
   const birthCSVWriter = await createBirthDeclarationCSVWriter()
   const deathCSVWriter = await createDeathDeclarationCSVWriter()
   for (let month = 0; month < totalMonths; month++) {
+    // eslint-disable-next-line no-console
     console.log(
       `VSEXPORT GENERATION: Commencing vital statistics export for month ${
         month + 1
@@ -907,7 +922,7 @@ const startScript = async () => {
     const locations = (await getCollectionDocuments(
       COLLECTION_NAMES.LOCATION,
       []
-    )) as unknown as fhir.Location[]
+    )) as unknown as Location[]
 
     await makeCompositionAndExportCSVReport(
       compositionsCursor,

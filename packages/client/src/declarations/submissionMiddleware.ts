@@ -206,7 +206,9 @@ export const submissionMiddleware: Middleware<{}, IStoreState> =
     }
 
     const isUpdateAction =
-      isValidationAction(submissionAction) || isRegisterAction(submissionAction)
+      isValidationAction(submissionAction) ||
+      isRegisterAction(submissionAction) ||
+      isCorrectionAction(submissionAction)
 
     const form = isUpdateAction
       ? getReviewForm(getState())[event]
@@ -221,16 +223,25 @@ export const submissionMiddleware: Middleware<{}, IStoreState> =
     )
 
     if (isCorrectionAction(submissionAction)) {
-      const changedValues = getChangedValues(form, declaration, offlineData)
+      const changedValues = getChangedValues(
+        form,
+        declaration,
+        offlineData,
+        getState().offline.userDetails as UserDetails
+      )
       graphqlPayload.registration ??= {}
       graphqlPayload.registration.correction =
         declaration.data.registration.correction ?? {}
       graphqlPayload.registration.correction.values = changedValues
     }
 
-    if (isUpdateAction) {
-      const changedValues = getChangedValues(form, declaration, offlineData)
-      changedValues.push(...trackSignatureChanges(declaration))
+    if (isUpdateAction && !isCorrectionAction(submissionAction)) {
+      const changedValues = getChangedValues(
+        form,
+        declaration,
+        offlineData,
+        getState().offline.userDetails as UserDetails
+      )
       graphqlPayload.registration ??= {}
       graphqlPayload.registration.changedValues = changedValues
     }

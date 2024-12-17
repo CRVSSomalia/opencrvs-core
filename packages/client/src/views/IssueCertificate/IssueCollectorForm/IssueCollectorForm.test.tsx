@@ -9,26 +9,12 @@
  * Copyright (C) The OpenCRVS Authors located at https://github.com/opencrvs/opencrvs-core/blob/master/AUTHORS.
  */
 import React from 'react'
-import { AppStore, createStore, IStoreState } from '@client/store'
+import { AppStore, createStore } from '@client/store'
 import { createLocation, History } from 'history'
 import { ReactWrapper } from 'enzyme'
 import { IssueCollectorForm } from './IssueCollectorForm'
-import {
-  createTestComponent,
-  flushPromises,
-  getFileFromBase64String,
-  inValidImageB64String,
-  mockDeathDeclarationData,
-  mockDeclarationData,
-  selectOption,
-  validImageB64String
-} from '@client/tests/util'
-import { waitFor, waitForElement } from '@client/tests/wait-for-element'
-import { storeDeclaration } from '@client/declarations'
-import { merge } from 'lodash'
-import { vi } from 'vitest'
+import { createTestComponent, mockDeclarationData } from '@client/tests/util'
 import { Event } from '@client/utils/gateway'
-import { flush } from 'fetch-mock'
 import { IssueCollectorFormForOthers } from './IssueFormForOthers'
 
 let store: AppStore

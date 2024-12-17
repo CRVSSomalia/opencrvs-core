@@ -20,7 +20,10 @@ import {
 } from '@opencrvs/commons/types'
 import { uploadBase64AttachmentsToDocumentsStore } from '@workflow/documents'
 import { getEventType } from '@workflow/features/registration/utils'
-import { getLoggedInPractitionerResource } from '@workflow/features/user/utils'
+import {
+  getLoggedInPractitionerResource,
+  getPractitionerOfficeId
+} from '@workflow/features/user/utils'
 import { auditEvent, createNewAuditEvent } from '@workflow/records/audit'
 import { sendBundleToHearth } from '@workflow/records/fhir'
 import { indexBundle, indexBundleToRoute } from '@workflow/records/search'
@@ -36,6 +39,7 @@ export const makeCorrectionRoute = createRoute({
   path: '/records/{recordId}/make-correction',
   allowedStartStates: ['REGISTERED', 'CERTIFIED', 'ISSUED'],
   action: 'MAKE_CORRECTION',
+  includeHistoryResources: true,
   handler: async (request, record): Promise<RegisteredRecord> => {
     const recordInput = request.payload as
       | BirthRegistration
@@ -75,6 +79,7 @@ export const makeCorrectionRoute = createRoute({
       )
     }
     const practitioner = await getLoggedInPractitionerResource(token)
+    const practitionerOfficeId = await getPractitionerOfficeId(practitioner.id)
 
     const recordInputWithUploadedAttachments =
       await uploadBase64AttachmentsToDocumentsStore(
@@ -93,6 +98,7 @@ export const makeCorrectionRoute = createRoute({
     const recordInCorrectedState = await toCorrected(
       record,
       practitioner,
+      practitionerOfficeId,
       correctionDetails,
       proofOfLegalCorrectionAttachments,
       paymentAttachmentUrl
@@ -118,11 +124,7 @@ export const makeCorrectionRoute = createRoute({
 
     await sendBundleToHearth(unassignedRecordWithTaskOnly)
 
-    await indexBundleToRoute(
-      unassignedRecordWithTaskOnly,
-      token,
-      '/events/unassigned'
-    )
+    await indexBundleToRoute(unassignedRecord, token, '/events/unassigned')
     await auditEvent('unassigned', unassignedRecord, token)
 
     return unassignedRecord

@@ -24,7 +24,7 @@ import {
   LOGIN_URL
 } from '@gateway/constants'
 import { readFileSync } from 'fs'
-import { validateFunc } from '@opencrvs/commons'
+import { validateFunc, logger } from '@opencrvs/commons'
 import {
   ApolloServer,
   ApolloServerPluginStopHapiServer
@@ -32,8 +32,7 @@ import {
 import { ApolloServerPluginLandingPageGraphQLPlayground } from 'apollo-server-core'
 import { getApolloConfig } from '@gateway/graphql/config'
 import * as database from '@gateway/utils/redis'
-import { logger } from '@opencrvs/commons'
-import { badRequest, Boom } from '@hapi/boom'
+import { badRequest, Boom, isBoom } from '@hapi/boom'
 import { RateLimitError } from './rate-limit'
 
 const publicCert = readFileSync(CERT_PUBLIC_KEY_PATH)
@@ -101,6 +100,16 @@ export async function createServer() {
   })
 
   app.ext('onPreResponse', (request, reply) => {
+    if (!isBoom(request.response)) {
+      request.response.header('access-control-expose-headers', 'X-Version', {
+        append: true
+      })
+      request.response.header(
+        'X-Version',
+        String(process.env.npm_package_version)
+      )
+    }
+
     if (request.response instanceof RateLimitError) {
       return reply
         .response({

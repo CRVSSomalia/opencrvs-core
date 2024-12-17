@@ -9,20 +9,23 @@
  * Copyright (C) The OpenCRVS Authors located at https://github.com/opencrvs/opencrvs-core/blob/master/AUTHORS.
  */
 import * as Hapi from '@hapi/hapi'
-import { logger } from '@opencrvs/commons'
+import {
+  logger,
+  SearchDocument,
+  EVENT,
+  getSearchTotalCount,
+  UUID
+} from '@opencrvs/commons'
 import { badRequest, internal } from '@hapi/boom'
 import { DEFAULT_SIZE, advancedSearch } from '@search/features/search/service'
 import { ISearchCriteria } from '@search/features/search/types'
-import { client } from '@search/elasticsearch/client'
+import { getOrCreateClient } from '@search/elasticsearch/client'
 import {
-  ICompositionBody,
-  EVENT,
-  IBirthCompositionBody,
-  IDeathCompositionBody,
+  BirthDocument,
+  DeathDocument,
   findDuplicateIds
 } from '@search/elasticsearch/utils'
 import { searchByCompositionId } from '@search/elasticsearch/dbhelper'
-import { capitalize } from '@search/features/search/utils'
 import { OPENCRVS_INDEX_NAME } from '@search/constants'
 import { getTokenPayload } from '@search/utils/authUtils'
 import { RouteScope } from '@search/config/routes'
@@ -30,6 +33,8 @@ import {
   searchForDeathDuplicates,
   searchForBirthDuplicates
 } from '@search/features/registration/deduplicate/service'
+import { capitalize } from 'lodash'
+import { resolveLocationChildren } from './location'
 
 type IAssignmentPayload = {
   compositionId: string
@@ -39,14 +44,18 @@ export async function searchAssignment(
   request: Hapi.Request,
   h: Hapi.ResponseToolkit
 ) {
+  const client = getOrCreateClient()
+
   const payload = request.payload as IAssignmentPayload
   try {
     const results = await searchByCompositionId(payload.compositionId, client)
 
     const result = results?.body?.hits?.hits[0]?._source as
-      | ICompositionBody
+      | SearchDocument
       | undefined
-    return h.response({ userId: result?.assignment?.userId }).code(200)
+    return h
+      .response({ practitionerId: result?.assignment?.practitionerId })
+      .code(200)
   } catch (error) {
     logger.error(`Search/searchAssginment: ${error}`)
     return internal(error)
@@ -57,6 +66,8 @@ export async function getAllDocumentsHandler(
   request: Hapi.Request,
   h: Hapi.ResponseToolkit
 ) {
+  const client = getOrCreateClient()
+
   try {
     // Before retrieving all documents, we need to check the total count to make sure that the query will no tbe too large
     // By performing the search, requesting only the first 10 in DEFAULT_SIZE we can get the total count
@@ -70,10 +81,12 @@ export async function getAllDocumentsHandler(
         }
       },
       {
+        meta: true,
         ignore: [404]
       }
     )
-    const count: number = allDocumentsCountCheck.body.hits.total.value
+
+    const count = getSearchTotalCount(allDocumentsCountCheck?.body?.hits?.total)
     if (count > 5000) {
       return internal(
         'Elastic contains over 5000 results.  It is risky to return all without pagination.'
@@ -90,7 +103,8 @@ export async function getAllDocumentsHandler(
         }
       },
       {
-        ignore: [404]
+        ignore: [404],
+        meta: true
       }
     )
     return h.response(allDocuments).code(200)
@@ -99,7 +113,7 @@ export async function getAllDocumentsHandler(
   }
 }
 
-interface ICountQueryParam {
+export interface ICountQueryParam {
   declarationJurisdictionId: string
   status: string[]
   event?: string
@@ -109,6 +123,8 @@ export async function getStatusWiseRegistrationCountHandler(
   request: Hapi.Request,
   h: Hapi.ResponseToolkit
 ) {
+  const client = getOrCreateClient()
+
   try {
     const payload = request.payload as ICountQueryParam
     const matchRules: Record<string, any>[] = [
@@ -124,15 +140,19 @@ export async function getStatusWiseRegistrationCountHandler(
       }
     ]
     if (payload.declarationJurisdictionId) {
+      const leafLevelJurisdictionIds = await resolveLocationChildren(
+        payload.declarationJurisdictionId as UUID
+      )
       matchRules.push({
-        match: {
-          declarationJurisdictionIds: payload.declarationJurisdictionId
+        terms: {
+          'declarationJurisdictionIds.keyword': leafLevelJurisdictionIds
         }
       })
     }
 
-    const response = await client.search<{
-      aggregations?: {
+    const response = await client.search<
+      SearchDocument,
+      {
         statusCounts: {
           buckets: Array<{
             key: string
@@ -140,23 +160,28 @@ export async function getStatusWiseRegistrationCountHandler(
           }>
         }
       }
-    }>({
-      body: {
-        size: 0,
-        query: {
-          bool: {
-            must: matchRules
-          }
-        },
-        aggs: {
-          statusCounts: {
-            terms: {
-              field: 'type.keyword'
+    >(
+      {
+        body: {
+          size: 0,
+          query: {
+            bool: {
+              must: matchRules
+            }
+          },
+          aggs: {
+            statusCounts: {
+              terms: {
+                field: 'type.keyword'
+              }
             }
           }
         }
+      },
+      {
+        meta: true
       }
-    })
+    )
 
     if (!response.body.aggregations) {
       return payload.status.map((status) => ({
@@ -194,6 +219,7 @@ export async function advancedRecordSearch(
       isExternalSearch,
       request.payload as ISearchCriteria
     )
+
     if (!result) {
       return h.response({}).code(404)
     }
@@ -209,9 +235,11 @@ export async function searchForBirthDeDuplication(
   request: Hapi.Request,
   h: Hapi.ResponseToolkit
 ) {
+  const client = getOrCreateClient()
+
   try {
     const result = await searchForBirthDuplicates(
-      request.payload as IBirthCompositionBody,
+      request.payload as BirthDocument,
       client
     )
     const duplicateIds = findDuplicateIds(result)
@@ -226,9 +254,11 @@ export async function searchForDeathDeDuplication(
   request: Hapi.Request,
   h: Hapi.ResponseToolkit
 ) {
+  const client = getOrCreateClient()
+
   try {
     const result = await searchForDeathDuplicates(
-      request.payload as IDeathCompositionBody,
+      request.payload as DeathDocument,
       client
     )
     const duplicateIds = findDuplicateIds(result)

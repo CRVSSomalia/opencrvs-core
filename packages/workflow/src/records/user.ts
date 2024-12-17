@@ -26,7 +26,7 @@ interface IUserRole {
   labels: Label[]
 }
 
-export interface IUserModelData {
+interface IUserModelData {
   _id: string
   username: string
   name: {
@@ -44,7 +44,6 @@ export interface IUserModelData {
   creationDate?: string
   practitionerId: string
   primaryOfficeId: string
-  catchmentAreaIds: string[]
   identifiers: {
     system?: string
     value?: string

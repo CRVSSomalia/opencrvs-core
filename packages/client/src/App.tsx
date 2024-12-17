@@ -61,7 +61,6 @@ import { Leaderboards } from '@client/views/Performance/Leaderboards'
 import { PerformanceDashboard } from '@client/views/Performance/Dashboard'
 import { SystemRoleType } from '@client/utils/gateway'
 import { AdministrativeLevels } from '@client/views/Organisation/AdministrativeLevels'
-import InformantNotification from '@client/views/SysAdmin/Communications/InformantSMSNotification/InformantSMSNotification'
 import { VerifyCertificatePage } from '@client/views/VerifyCertificate/VerifyCertificatePage'
 import { IssueCertificate } from '@client/views/IssueCertificate/IssueCertificate'
 import { IssuePayment } from '@client/views/IssueCertificate/IssueCollectorForm/IssuePayment'
@@ -72,6 +71,7 @@ import { PrintRecord } from './views/PrintRecord/PrintRecord'
 import { ReviewCorrection } from './views/ReviewCorrection/ReviewCorrection'
 import { ReviewCertificate } from './views/PrintCertificate/ReviewCertificateAction'
 import AllUserEmail from './views/SysAdmin/Communications/AllUserEmail/AllUserEmail'
+import { ReloadModal } from './views/Modals/ReloadModal'
 
 interface IAppProps {
   client?: ApolloClient<NormalizedCacheObject>
@@ -110,6 +110,7 @@ export function App(props: IAppProps) {
                     <NotificationComponent>
                       <Switch>
                         <Route>
+                          <ReloadModal />
                           <Page>
                             <MainSection>
                               <ProtectedPage
@@ -254,24 +255,6 @@ export function App(props: IAppProps) {
                                                 routes.REGISTRAR_HOME_TAB_PAGE
                                               }
                                               component={OfficeHome}
-                                            />
-                                            <ProtectedRoute
-                                              exact
-                                              roles={[
-                                                SystemRoleType.NationalSystemAdmin
-                                              ]}
-                                              path={routes.CERTIFICATE_CONFIG}
-                                              component={CertificatesConfig}
-                                            />
-                                            <ProtectedRoute
-                                              exact
-                                              roles={[
-                                                SystemRoleType.NationalSystemAdmin
-                                              ]}
-                                              path={
-                                                routes.INFORMANT_NOTIFICATION
-                                              }
-                                              component={InformantNotification}
                                             />
                                             <ProtectedRoute
                                               exact

@@ -11,20 +11,20 @@
 import {
   getStatusFromTask,
   getTaskFromSavedBundle,
-  TaskStatus,
-  ValidRecord
+  TaskStatus
 } from '@opencrvs/commons/types'
 import * as Hapi from '@hapi/hapi'
 import * as z from 'zod'
 import { validateRequest } from '@workflow/utils/index'
 import { getValidRecordById } from '@workflow/records/index'
 import { getToken } from '@workflow/utils/auth-utils'
-import { IAuthHeader, logger, findAssignment } from '@opencrvs/commons'
+import { IAuthHeader, logger } from '@opencrvs/commons'
 import { toDownloaded } from '@workflow/records/state-transitions'
 import { hasScope, inScope } from '@opencrvs/commons/authentication'
 import { sendBundleToHearth } from '@workflow/records/fhir'
 import { indexBundleToRoute } from '@workflow/records/search'
 import { auditEvent } from '@workflow/records/audit'
+import { findAssignment } from '@opencrvs/commons/assignment'
 import { getUserOrSystem } from '@workflow/records/user'
 
 function getDownloadedOrAssignedExtension(
@@ -68,7 +68,7 @@ export async function downloadRecordHandler(
     businessStatus
   )
 
-  const { downloadedRecord, downloadedRecordWithTaskOnly } = await toDownloaded(
+  const { downloadedRecordWithTaskOnly, downloadedRecord } = await toDownloaded(
     record,
     token,
     extensionUrl
@@ -99,16 +99,15 @@ export async function downloadRecordHandler(
       await sendBundleToHearth(downloadedRecordWithTaskOnly)
       await auditEvent(auditRecordEvent, downloadedRecord, token)
 
-      if (extensionUrl !== 'http://opencrvs.org/specs/extension/regDownloaded')
-        await indexBundleToRoute(
-          downloadedRecordWithTaskOnly,
-          token,
-          '/events/assigned'
-        )
+      if (
+        extensionUrl !== 'http://opencrvs.org/specs/extension/regDownloaded'
+      ) {
+        await indexBundleToRoute(downloadedRecord, token, '/events/assigned')
+      }
     } catch (error) {
       logger.error(error)
     }
   })
 
-  return downloadedRecord as ValidRecord
+  return downloadedRecord
 }
