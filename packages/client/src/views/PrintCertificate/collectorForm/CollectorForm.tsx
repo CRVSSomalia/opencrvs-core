@@ -11,7 +11,6 @@
 import { PrimaryButton, TertiaryButton } from '@opencrvs/components/lib/buttons'
 import { ErrorText } from '@opencrvs/components/lib/ErrorText'
 import { Content, ContentSize } from '@opencrvs/components/lib/Content'
-import { Button } from '@opencrvs/components/lib/Button'
 
 import { ActionPageLight } from '@opencrvs/components/lib/ActionPageLight'
 import { ResponsiveModal } from '@opencrvs/components/lib/ResponsiveModal'
@@ -407,29 +406,6 @@ class CollectorFormComponent extends React.Component<IProps, IState> {
             }
             size={ContentSize.SMALL}
             showTitleOnMobile
-            bottomActionButtons={[
-              <Button
-                key="confirm_form"
-                id="confirm_form"
-                type="primary"
-                size="large"
-                fullWidth
-                onClick={() => {
-                  this.continueButtonHandler(
-                    declarationToBeCertified.id,
-                    formGroup.id,
-                    nextSectionGroup ? nextSectionGroup.groupId : undefined,
-                    event,
-                    formSection.id,
-                    formGroup.fields,
-                    declarationToBeCertified
-                  )
-                }}
-                disabled={this.state.isFileUploading}
-              >
-                {intl.formatMessage(buttonMessages.continueButton)}
-              </Button>
-            ]}
           >
             {showError && (
               <ErrorWrapper>
