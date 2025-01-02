@@ -36,25 +36,9 @@ export function findTaskExtension<
   T extends keyof KnownExtensionType,
   Task extends TaskHistory | SavedTask
 >(task: Task, extensionUrl: T) {
-  if (!task || !task.extension) {
-    logger.info(`REINDEX BUG: task.extension doest exist`)
-    logger.info(
-      `REINDEX BUG: task.extension doest exist: ${JSON.stringify(task)}`
-    )
-    logger.info(`REINDEX BUG: extensionUrl: ${extensionUrl}`)
-  }
-  return task.extension.find((ext): ext is KnownExtensionType[T] => {
-    if (!ext) {
-      logger.info(`REINDEX BUG: task.extension array is empty`)
-      logger.info(`REINDEX BUG: task: ${JSON.stringify(task)}`)
-      logger.info(`REINDEX BUG: extensionUrl: ${extensionUrl}`)
-    }
-    if (!ext.url) {
-      logger.info(`REINDEX BUG: task: ${JSON.stringify(task)}`)
-      logger.info(`REINDEX BUG: extensionUrl: ${extensionUrl}`)
-    }
-    return ext.url === extensionUrl
-  })
+  return task.extension.find(
+    (ext): ext is KnownExtensionType[T] => ext && ext.url === extensionUrl
+  )
 }
 
 export function findExtension<T extends keyof KnownExtensionType>(
