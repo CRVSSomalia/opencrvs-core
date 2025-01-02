@@ -36,6 +36,8 @@ export function findTaskExtension<
   T extends keyof KnownExtensionType,
   Task extends TaskHistory | SavedTask
 >(task: Task, extensionUrl: T) {
+  logger.info(`REINDEX BUG: task: ${JSON.stringify(task)}`)
+  logger.info(`REINDEX BUG: extensionUrl: ${extensionUrl}`)
   return task.extension.find(
     (ext): ext is KnownExtensionType[T] => ext.url === extensionUrl
   )
